@@ -928,7 +928,14 @@ Choose NO if you want to keep the backup file.`
     document.querySelectorAll(".tab-content").forEach((content) => {
       content.style.display = "none";
     });
-    document.getElementById(`${tabName}Content`).style.display = "block";
+
+    // Fix: use correct element ID
+    const contentElement = document.getElementById(`${tabName}Content`);
+    if (contentElement) {
+      contentElement.style.display = "block";
+    } else {
+      console.error(`Tab content element not found: ${tabName}Content`);
+    }
 
     // Load appropriate data
     if (tabName === "payments") {

@@ -116,12 +116,14 @@ class PaymentService {
   }
 
   // Get all cards
-  getCards() {
+  async getCards() {
+    await this.loadCards(); // Ensure cards are loaded
     return [...this.cards];
   }
 
   // Get card by ID
-  getCard(cardId) {
+  async getCard(cardId) {
+    await this.loadCards(); // Ensure cards are loaded
     return this.cards.find((card) => card.id === cardId);
   }
 

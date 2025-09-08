@@ -281,7 +281,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           break;
 
         case "getPaymentCards":
-          const cards = paymentService.getCards();
+          const cards = await paymentService.getCards();
           sendResponse({ success: true, data: cards });
           break;
 
@@ -297,7 +297,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
         case "autoFillPayment":
           // Get card data first
-          const cardData = paymentService.getCard(request.cardId);
+          const cardData = await paymentService.getCard(request.cardId);
           if (!cardData) {
             sendResponse({ success: false, error: "Card not found" });
             break;
