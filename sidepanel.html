@@ -154,6 +154,39 @@
             <span class="cards-count" id="cardsCount">(0)</span>
           </div>
 
+          <!-- Card Filters and Bulk Actions -->
+          <div class="card-filters">
+            <div class="filter-row">
+              <input
+                type="text"
+                id="cardFilterInput"
+                placeholder="Filter cards by number, type, expiry..."
+                class="filter-input"
+              />
+              <select id="cardTypeFilter" class="filter-select">
+                <option value="">All Types</option>
+                <option value="visa">Visa</option>
+                <option value="mastercard">MasterCard</option>
+                <option value="american express">American Express</option>
+                <option value="discover">Discover</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </div>
+
+            <div class="bulk-actions" id="bulkActions" style="display: none">
+              <label class="select-all-container">
+                <input type="checkbox" id="selectAllCards" />
+                <span>Select All</span>
+              </label>
+              <button id="deleteSelectedBtn" class="btn btn-danger btn-sm">
+                🗑️ Delete Selected (<span id="selectedCount">0</span>)
+              </button>
+              <button id="clearSelectionBtn" class="btn btn-secondary btn-sm">
+                ✖️ Clear Selection
+              </button>
+            </div>
+          </div>
+
           <div id="cardsList" class="cards-list">
             <!-- Cards will be populated here -->
           </div>
@@ -211,6 +244,9 @@
     <!-- Card Item Template -->
     <template id="sidebarCardTemplate">
       <div class="card-item" data-card-id="">
+        <div class="card-checkbox">
+          <input type="checkbox" class="card-select" />
+        </div>
         <div class="card-info">
           <div class="card-icon">
             <span class="card-type-icon">💳</span>

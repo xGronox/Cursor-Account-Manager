@@ -7,6 +7,11 @@ class CursorAccountSidebar {
     this.infoUpdated = false;
     this.paymentCards = [];
     this.currentTab = "accounts";
+    this.selectedCards = new Set();
+    this.cardFilters = {
+      search: "",
+      type: "",
+    };
     this.init();
   }
 
@@ -100,6 +105,77 @@ class CursorAccountSidebar {
     document.getElementById("clearCardsBtn").addEventListener("click", () => {
       this.clearAllCards();
     });
+
+    // Card filter and selection functionality
+    const cardFilterInput = document.getElementById("cardFilterInput");
+    if (cardFilterInput) {
+      cardFilterInput.addEventListener("input", (e) => {
+        this.cardFilters.search = e.target.value.toLowerCase();
+        this.filterCards();
+      });
+    }
+
+    const cardTypeFilter = document.getElementById("cardTypeFilter");
+    if (cardTypeFilter) {
+      cardTypeFilter.addEventListener("change", (e) => {
+        this.cardFilters.type = e.target.value.toLowerCase();
+        this.filterCards();
+      });
+    }
+
+    const selectAllCards = document.getElementById("selectAllCards");
+    if (selectAllCards) {
+      selectAllCards.addEventListener("change", (e) => {
+        this.selectAllCards(e.target.checked);
+      });
+    }
+
+    const deleteSelectedBtn = document.getElementById("deleteSelectedBtn");
+    if (deleteSelectedBtn) {
+      deleteSelectedBtn.addEventListener("click", () => {
+        this.deleteSelectedCards();
+      });
+    }
+
+    const clearSelectionBtn = document.getElementById("clearSelectionBtn");
+    if (clearSelectionBtn) {
+      clearSelectionBtn.addEventListener("click", () => {
+        this.clearSelection();
+      });
+    }
+
+    // Card filter and selection functionality
+    document
+      .getElementById("cardFilterInput")
+      .addEventListener("input", (e) => {
+        this.cardFilters.search = e.target.value.toLowerCase();
+        this.filterCards();
+      });
+
+    document
+      .getElementById("cardTypeFilter")
+      .addEventListener("change", (e) => {
+        this.cardFilters.type = e.target.value.toLowerCase();
+        this.filterCards();
+      });
+
+    document
+      .getElementById("selectAllCards")
+      .addEventListener("change", (e) => {
+        this.selectAllCards(e.target.checked);
+      });
+
+    document
+      .getElementById("deleteSelectedBtn")
+      .addEventListener("click", () => {
+        this.deleteSelectedCards();
+      });
+
+    document
+      .getElementById("clearSelectionBtn")
+      .addEventListener("click", () => {
+        this.clearSelection();
+      });
 
     // Cards modal controls
     document.getElementById("closeCardsModal").addEventListener("click", () => {
@@ -993,10 +1069,27 @@ Choose NO if you want to keep the backup file.`
     emptyEl.style.display = "none";
     listEl.innerHTML = "";
 
+    // Show/hide filters based on card count
+    const filtersElement = document.querySelector(".card-filters");
+    if (filtersElement) {
+      filtersElement.style.display =
+        this.paymentCards.length > 0 ? "block" : "none";
+    }
+
     this.paymentCards.forEach((card) => {
       const cardEl = this.createCardElement(card);
       listEl.appendChild(cardEl);
     });
+
+    // Apply current filters if they exist
+    if (this.cardFilters) {
+      this.filterCards();
+    }
+
+    // Update selection UI if it exists
+    if (this.updateSelectionUI) {
+      this.updateSelectionUI();
+    }
   }
 
   // Create card element
@@ -1007,6 +1100,15 @@ Choose NO if you want to keep the backup file.`
 
     // Set card data
     container.dataset.cardId = card.id;
+
+    // Card selection checkbox
+    const cardSelect = container.querySelector(".card-select");
+    if (cardSelect) {
+      cardSelect.addEventListener("change", (e) => {
+        e.stopPropagation();
+        this.toggleCardSelection(card.id, e.target.checked);
+      });
+    }
 
     // Set card icon based on type
     const iconEl = container.querySelector(".card-type-icon");
@@ -1051,6 +1153,165 @@ Choose NO if you want to keep the backup file.`
   formatCardNumber(cardNumber) {
     if (!cardNumber) return "";
     return `**** **** **** ${cardNumber.slice(-4)}`;
+  }
+
+  // Card filtering functionality
+  filterCards() {
+    if (!this.cardFilters) return;
+
+    const cardsList = document.getElementById("cardsList");
+    const cardItems = cardsList.querySelectorAll(".card-item");
+
+    cardItems.forEach((cardItem) => {
+      const cardId = cardItem.getAttribute("data-card-id");
+      const card = this.paymentCards.find((c) => c.id === cardId);
+
+      if (!card) {
+        cardItem.style.display = "none";
+        return;
+      }
+
+      const matchesSearch =
+        !this.cardFilters.search ||
+        card.number.includes(this.cardFilters.search) ||
+        card.type.toLowerCase().includes(this.cardFilters.search) ||
+        card.expiry.includes(this.cardFilters.search);
+
+      const matchesType =
+        !this.cardFilters.type ||
+        card.type.toLowerCase() === this.cardFilters.type;
+
+      const shouldShow = matchesSearch && matchesType;
+      cardItem.style.display = shouldShow ? "flex" : "none";
+    });
+  }
+
+  // Card selection functionality
+  toggleCardSelection(cardId, selected) {
+    if (!this.selectedCards) {
+      this.selectedCards = new Set();
+    }
+
+    if (selected) {
+      this.selectedCards.add(cardId);
+    } else {
+      this.selectedCards.delete(cardId);
+    }
+
+    // Update card visual state
+    const cardItem = document.querySelector(`[data-card-id="${cardId}"]`);
+    if (cardItem) {
+      cardItem.classList.toggle("selected", selected);
+    }
+
+    this.updateSelectionUI();
+  }
+
+  selectAllCards(selectAll) {
+    if (!this.selectedCards) {
+      this.selectedCards = new Set();
+    }
+
+    const cardsList = document.getElementById("cardsList");
+    const visibleCardItems = Array.from(
+      cardsList.querySelectorAll(".card-item")
+    ).filter((item) => item.style.display !== "none");
+
+    visibleCardItems.forEach((cardItem) => {
+      const cardId = cardItem.getAttribute("data-card-id");
+      const checkbox = cardItem.querySelector(".card-select");
+
+      if (checkbox) {
+        checkbox.checked = selectAll;
+        this.toggleCardSelection(cardId, selectAll);
+      }
+    });
+  }
+
+  updateSelectionUI() {
+    if (!this.selectedCards) {
+      this.selectedCards = new Set();
+    }
+
+    const selectedCount = this.selectedCards.size;
+    const bulkActions = document.getElementById("bulkActions");
+    const selectedCountSpan = document.getElementById("selectedCount");
+    const selectAllCheckbox = document.getElementById("selectAllCards");
+
+    if (bulkActions) {
+      bulkActions.style.display = selectedCount > 0 ? "flex" : "none";
+    }
+
+    if (selectedCountSpan) {
+      selectedCountSpan.textContent = selectedCount;
+    }
+
+    if (selectAllCheckbox) {
+      const visibleCards = Array.from(
+        document.querySelectorAll(".card-item")
+      ).filter((item) => item.style.display !== "none").length;
+
+      selectAllCheckbox.indeterminate =
+        selectedCount > 0 && selectedCount < visibleCards;
+      selectAllCheckbox.checked =
+        selectedCount > 0 && selectedCount === visibleCards;
+    }
+  }
+
+  clearSelection() {
+    if (!this.selectedCards) {
+      this.selectedCards = new Set();
+    }
+
+    this.selectedCards.clear();
+
+    // Uncheck all checkboxes
+    document.querySelectorAll(".card-select").forEach((checkbox) => {
+      checkbox.checked = false;
+    });
+
+    // Remove selected class
+    document.querySelectorAll(".card-item.selected").forEach((item) => {
+      item.classList.remove("selected");
+    });
+
+    this.updateSelectionUI();
+  }
+
+  async deleteSelectedCards() {
+    if (!this.selectedCards || this.selectedCards.size === 0) return;
+
+    const confirmed = confirm(
+      `Are you sure you want to delete ${this.selectedCards.size} selected card(s)? This action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      this.showLoading(true);
+
+      // Delete cards one by one
+      const selectedArray = Array.from(this.selectedCards);
+      for (const cardId of selectedArray) {
+        await this.removePaymentCard(cardId, false); // Don't reload after each deletion
+      }
+
+      // Clear selection
+      this.clearSelection();
+
+      // Reload cards once
+      await this.loadPaymentCards();
+
+      this.showNotification(
+        `Successfully deleted ${selectedArray.length} card(s)`,
+        "success"
+      );
+    } catch (error) {
+      console.error("Error deleting selected cards:", error);
+      this.showNotification("Error deleting selected cards", "error");
+    } finally {
+      this.showLoading(false);
+    }
   }
 
   // Show import cards modal
