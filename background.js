@@ -205,23 +205,102 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
                   }
 
-                  // Find status - try multiple selectors
+                  // Find status - enhanced selectors for better detection
                   const statusSelectors = [
+                    // New complex class selector for Pro Trial
+                    'p[class*="flex-shrink-0"][class*="text-sm"][class*="text-brand-gray-300"]',
+                    // Specific selector for div with title Pro Trial
+                    'div[title="Pro Trial"] p',
+                    'div[title*="Trial"] p',
+                    'div[title*="Free"] p',
+                    'div[title*="Pro"] p',
+                    'div[title*="Business"] p',
+                    // Direct title attribute selectors
+                    'div[title="Pro Trial"]',
+                    'div[title="Free Plan"]',
+                    'div[title="Pro Plan"]',
+                    'div[title="Business Plan"]',
+                    // Original selectors
                     "p.flex-shrink-0.text-sm.text-brand-gray-300",
                     '[class*="text-brand-gray-300"]',
                     'div[title*="Plan"] p',
                     'div[title*="plan"] p',
                     "div.flex.min-w-0.items-center.gap-1 p",
+                    // Specific class combination selectors
+                    'div.flex.min-w-0.items-center.gap-1[title*="Trial"] p',
+                    'div.flex.min-w-0.items-center.gap-1[title*="Free"] p',
+                    'div.flex.min-w-0.items-center.gap-1[title*="Pro"] p',
+                    // Additional selectors for various layouts
+                    'p:contains("Trial")',
+                    'p:contains("Free")',
+                    'p:contains("Pro")',
+                    'span[class*="text-brand-gray-300"]',
+                    '[class*="text-sm"]:contains("Trial")',
+                    '[class*="text-sm"]:contains("Free")',
+                    '[class*="text-sm"]:contains("Pro")',
                   ];
 
                   for (const selector of statusSelectors) {
-                    const statusEls = document.querySelectorAll(selector);
+                    let statusEls;
+
+                    // Handle :contains() pseudo-selector manually since it's not supported in all browsers
+                    if (selector.includes(":contains(")) {
+                      const baseSelector = selector.split(":contains(")[0];
+                      const searchText = selector
+                        .split(":contains(")[1]
+                        .replace(")", "")
+                        .replace(/"/g, "");
+                      statusEls = Array.from(
+                        document.querySelectorAll(baseSelector)
+                      ).filter((el) =>
+                        el.textContent
+                          .toLowerCase()
+                          .includes(searchText.toLowerCase())
+                      );
+                    } else {
+                      statusEls = document.querySelectorAll(selector);
+                    }
+
                     for (const el of statusEls) {
                       const text = el.textContent.trim().toLowerCase();
-                      if (text) {
-                        // Handle variations like "Free Plan", "Pro Plan", etc.
-                        if (text.includes("free")) {
+                      const title = el.getAttribute("title") || "";
+                      const titleLower = title.toLowerCase();
+
+                      if (text || title) {
+                        console.log(
+                          `Found status element with text: "${text}", title: "${title}"`
+                        );
+
+                        // Check title attribute first (more reliable)
+                        if (
+                          titleLower.includes("pro trial") ||
+                          titleLower === "pro trial"
+                        ) {
+                          status = "pro trial";
+                          break;
+                        } else if (titleLower.includes("free")) {
                           status = "free";
+                          break;
+                        } else if (
+                          titleLower.includes("pro plan") ||
+                          titleLower === "pro plan"
+                        ) {
+                          status = "pro";
+                          break;
+                        } else if (titleLower.includes("business")) {
+                          status = "business";
+                          break;
+                        }
+
+                        // Then check text content
+                        else if (text.includes("free")) {
+                          status = "free";
+                          break;
+                        } else if (
+                          text.includes("pro trial") ||
+                          text.includes("trial")
+                        ) {
+                          status = "pro trial";
                           break;
                         } else if (text.includes("pro")) {
                           status = "pro";
@@ -235,15 +314,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     if (status !== "unknown") break;
                   }
 
-                  // Fallback: check title attributes directly
+                  // Fallback: check title attributes and aria-labels
                   if (status === "unknown") {
                     const titleEls = document.querySelectorAll(
-                      '[title*="Plan"], [title*="plan"]'
+                      '[title*="Plan"], [title*="plan"], [title*="Trial"], [title*="trial"]'
                     );
                     for (const el of titleEls) {
                       const title = el.getAttribute("title").toLowerCase();
                       if (title.includes("free")) {
                         status = "free";
+                        break;
+                      } else if (
+                        title.includes("pro trial") ||
+                        title.includes("trial")
+                      ) {
+                        status = "pro trial";
                         break;
                       } else if (title.includes("pro")) {
                         status = "pro";
@@ -251,6 +336,39 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                       } else if (title.includes("business")) {
                         status = "business";
                         break;
+                      }
+                    }
+                  }
+
+                  // Additional fallback: search all text containing status keywords
+                  if (status === "unknown") {
+                    const allTextElements =
+                      document.querySelectorAll("p, span, div");
+                    for (const el of allTextElements) {
+                      const text = el.textContent.trim().toLowerCase();
+                      if (
+                        text === "pro trial" ||
+                        text === "free plan" ||
+                        text === "pro plan" ||
+                        text === "business plan"
+                      ) {
+                        console.log(`Found status in fallback: "${text}"`);
+                        if (text.includes("free")) {
+                          status = "free";
+                          break;
+                        } else if (
+                          text.includes("pro trial") ||
+                          text === "pro trial"
+                        ) {
+                          status = "pro trial";
+                          break;
+                        } else if (text.includes("pro")) {
+                          status = "pro";
+                          break;
+                        } else if (text.includes("business")) {
+                          status = "business";
+                          break;
+                        }
                       }
                     }
                   }

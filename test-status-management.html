@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Status Management</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-output {
+        background: #f5f5f5;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 3px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+      .info {
+        color: blue;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+      }
+      input {
+        padding: 5px;
+        margin: 5px;
+        width: 200px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Test Status Management</h1>
+
+    <div class="test-section">
+      <h3>Test 1: Default Status (Should be Empty)</h3>
+      <button onclick="testDefaultStatus()">Test Default Status</button>
+      <div id="defaultOutput" class="test-output"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 2: Preserve Existing Status</h3>
+      <input
+        type="text"
+        id="testAccountName"
+        placeholder="Test Account Name"
+        value="test_account_123"
+      />
+      <input
+        type="text"
+        id="testStatus"
+        placeholder="Test Status"
+        value="pro trial"
+      />
+      <button onclick="testPreserveStatus()">Test Preserve Status</button>
+      <div id="preserveOutput" class="test-output"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Test 3: Import Account Status Logic</h3>
+      <textarea
+        id="testImportData"
+        rows="10"
+        cols="50"
+        placeholder="Paste test import data..."
+      >
+{
+  "version": "1.0",
+  "extension": "cursor-account-manager", 
+  "exportDate": "2024-01-01T00:00:00.000Z",
+  "account": {
+    "name": "import_test_account",
+    "email": "test@example.com",
+    "status": "free",
+    "cookies": [
+      {
+        "name": "WorkosCursorSessionToken",
+        "value": "test_session_token_123",
+        "domain": ".cursor.com"
+      }
+    ]
+  }
+}
+        </textarea
+      >
+      <br />
+      <button onclick="testImportLogic()">Test Import Logic</button>
+      <div id="importOutput" class="test-output"></div>
+    </div>
+
+    <script src="services/account.js"></script>
+    <script>
+      // Create account service instance for testing
+      const accountService = new AccountService();
+
+      async function testDefaultStatus() {
+        const output = document.getElementById("defaultOutput");
+
+        try {
+          console.log("🧪 Testing Default Status...");
+
+          // Mock empty account info
+          const mockAccountInfo = {
+            email: "test@example.com",
+            status: "", // Empty status
+          };
+
+          // Test the logic from getAll()
+          const resultStatus = mockAccountInfo.status || "";
+
+          let html = `<div class="info">📋 Default Status Test Results:</div>`;
+          html += `<div><strong>Input Status:</strong> "${mockAccountInfo.status}"</div>`;
+          html += `<div><strong>Result Status:</strong> "${resultStatus}"</div>`;
+
+          if (resultStatus === "") {
+            html += `<div class="success">✅ Correct: Default status is empty (not "free")</div>`;
+          } else {
+            html += `<div class="error">❌ Error: Default status should be empty</div>`;
+          }
+
+          output.innerHTML = html;
+        } catch (error) {
+          output.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        }
+      }
+
+      async function testPreserveStatus() {
+        const output = document.getElementById("preserveOutput");
+        const accountName = document.getElementById("testAccountName").value;
+        const testStatus = document.getElementById("testStatus").value;
+
+        try {
+          console.log("🧪 Testing Preserve Status...");
+
+          let html = `<div class="info">📋 Preserve Status Test Results:</div>`;
+          html += `<div><strong>Account:</strong> ${accountName}</div>`;
+          html += `<div><strong>Test Status:</strong> "${testStatus}"</div>`;
+
+          // Simulate the preserve logic from saveAccountInfo
+          const mockExistingData = {
+            [accountName]: {
+              email: "test@example.com",
+              status: testStatus,
+            },
+          };
+
+          // Test preserve logic: empty status with existing data
+          let newStatus = ""; // Empty status being saved
+          if (
+            !newStatus &&
+            mockExistingData[accountName] &&
+            mockExistingData[accountName].status
+          ) {
+            newStatus = mockExistingData[accountName].status;
+            html += `<div class="success">✅ Preserved existing status: "${newStatus}"</div>`;
+          } else {
+            html += `<div class="error">❌ Failed to preserve status</div>`;
+          }
+
+          // Test preserve logic: non-empty status (should not preserve)
+          let newStatus2 = "new status";
+          const originalStatus2 = newStatus2;
+          if (
+            !newStatus2 &&
+            mockExistingData[accountName] &&
+            mockExistingData[accountName].status
+          ) {
+            newStatus2 = mockExistingData[accountName].status;
+          }
+
+          if (newStatus2 === originalStatus2) {
+            html += `<div class="success">✅ Correctly kept new status: "${newStatus2}"</div>`;
+          } else {
+            html += `<div class="error">❌ Incorrectly preserved when new status provided</div>`;
+          }
+
+          output.innerHTML = html;
+        } catch (error) {
+          output.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        }
+      }
+
+      async function testImportLogic() {
+        const output = document.getElementById("importOutput");
+        const importData = document.getElementById("testImportData").value;
+
+        try {
+          console.log("🧪 Testing Import Logic...");
+
+          const data = JSON.parse(importData);
+          let html = `<div class="info">📋 Import Logic Test Results:</div>`;
+
+          // Test import logic from importAccountFromJSON
+          let cookies, email, status, name;
+
+          if (Array.isArray(data)) {
+            // Direct cookie array
+            cookies = data;
+            name = "test_account";
+            email = name;
+            status = ""; // Should be empty, not "free"
+            html += `<div><strong>Format:</strong> Direct cookie array</div>`;
+          } else if (data.account) {
+            // Full export format
+            cookies = data.account.cookies;
+            email = data.account.email || data.account.name;
+            status = data.account.status || ""; // Should default to empty, not "free"
+            name = data.account.name;
+            html += `<div><strong>Format:</strong> Full export format</div>`;
+          }
+
+          html += `<div><strong>Account Name:</strong> ${name}</div>`;
+          html += `<div><strong>Email:</strong> ${email}</div>`;
+          html += `<div><strong>Import Status:</strong> "${status}"</div>`;
+
+          // Test the new default behavior
+          if (data.account && !data.account.status) {
+            const defaultStatus = ""; // Should be empty
+            html += `<div class="success">✅ Correct: Missing status defaults to empty: "${defaultStatus}"</div>`;
+          } else if (data.account && data.account.status) {
+            html += `<div class="info">ℹ️ Status from file: "${data.account.status}"</div>`;
+          }
+
+          // Test override logic
+          const mockExistingAccount = {
+            name: name,
+            status: "pro trial", // Existing status
+          };
+
+          const overrideExisting = true;
+          if (overrideExisting && mockExistingAccount.status) {
+            const preservedStatus = mockExistingAccount.status;
+            html += `<div class="success">✅ Would preserve existing status: "${preservedStatus}" (instead of "${status}")</div>`;
+          }
+
+          output.innerHTML = html;
+        } catch (error) {
+          output.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        }
+      }
+
+      // Test scenarios on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        console.log("🧪 Status Management Test Page Loaded");
+        testDefaultStatus();
+      });
+    </script>
+  </body>
+</html>

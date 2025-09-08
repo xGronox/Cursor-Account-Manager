@@ -27,7 +27,7 @@ class AccountService {
         avatarUrl: avatars[this.AVATARS_KEY]?.[name] || null,
         expiresAt: this.getEarliestExpiry(cookies),
         email: info.email || name,
-        status: info.status || "free",
+        status: info.status || "",
       };
     });
   }
@@ -207,11 +207,26 @@ class AccountService {
     const accountInfo = await chrome.storage.local.get(this.ACCOUNT_INFO_KEY);
     const infoData = accountInfo[this.ACCOUNT_INFO_KEY] || {};
 
+    // If status is empty/null and account already has status, preserve existing
+    if (!status && infoData[accountName] && infoData[accountName].status) {
+      status = infoData[accountName].status;
+      console.log(`Preserving existing status for ${accountName}: ${status}`);
+    }
+
     infoData[accountName] = { email, status };
 
     await chrome.storage.local.set({
       [this.ACCOUNT_INFO_KEY]: infoData,
     });
+
+    console.log(`Saved account info for ${accountName}: ${email}, ${status}`);
+  }
+
+  // Get account info (email and status)
+  async getAccountInfo(accountName) {
+    const accountInfo = await chrome.storage.local.get(this.ACCOUNT_INFO_KEY);
+    const infoData = accountInfo[this.ACCOUNT_INFO_KEY] || {};
+    return infoData[accountName] || null;
   }
 
   // Set active account
@@ -348,6 +363,9 @@ class AccountService {
 
     const username = await this.extractUsername();
     await this.upsert(username, cookies);
+
+    // Initialize account info with empty status (will be updated from dashboard)
+    await this.saveAccountInfo(username, username, "");
 
     return username;
   }
@@ -716,12 +734,12 @@ class AccountService {
         cookies = data;
         name = customName || this.generateAccountName();
         email = name;
-        status = "free";
+        status = "";
       } else if (data.account) {
         // Full export format
         cookies = data.account.cookies;
         email = data.account.email || data.account.name;
-        status = data.account.status || "free";
+        status = data.account.status || "";
         name = customName || data.account.name || this.generateAccountName();
       } else {
         throw new Error("Invalid JSON format");
@@ -744,6 +762,14 @@ class AccountService {
       if (duplicate && overrideExisting) {
         name = duplicate.account.name;
         console.log(`Updating existing account: ${name}`);
+
+        // Get existing account info to preserve status if it exists
+        const existingInfo = await this.getAccountInfo(name);
+        if (existingInfo && existingInfo.status) {
+          // Keep existing status instead of overriding with imported status
+          status = existingInfo.status;
+          console.log(`Preserving existing status: ${status}`);
+        }
       }
 
       // Save account
