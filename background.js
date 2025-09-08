@@ -3,6 +3,7 @@
 // Import services
 importScripts("services/account.js");
 importScripts("services/payment.js");
+importScripts("services/account-deletion.js");
 
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async () => {
@@ -524,6 +525,36 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           } catch (error) {
             sendResponse({ success: false, error: error.message });
           }
+          break;
+
+        case "deleteFreeAccount":
+          try {
+            const result = await accountDeletionService.deleteFreeAccount();
+            sendResponse(result);
+          } catch (error) {
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+
+        case "deleteProTrialAccount":
+          try {
+            const result = await accountDeletionService.deleteProTrialAccount();
+            sendResponse(result);
+          } catch (error) {
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+
+        case "checkDeletionStatus":
+          sendResponse({
+            success: true,
+            inProgress: accountDeletionService.isDeletionInProgress(),
+          });
+          break;
+
+        case "cancelDeletion":
+          accountDeletionService.cancelDeletion();
+          sendResponse({ success: true, message: "Deletion cancelled" });
           break;
 
         default:

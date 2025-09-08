@@ -22,6 +22,9 @@ class PaymentService {
   }
 
   // Parse card data from text format (card.md format)
+  // Supports both formats:
+  // - Legacy (3 parts): number|MM/YY|CVC
+  // - New (4 parts): number|month|year|CVC
   parseCardData(cardText) {
     const lines = cardText.split("\n").filter((line) => line.trim());
     const cards = [];
@@ -33,30 +36,108 @@ class PaymentService {
       }
 
       const parts = line.split("|");
-      if (parts.length >= 3) {
-        const cardNumber = parts[0].trim();
-        const expiry = parts[1].trim();
-        const cvc = parts[2].trim();
+      let cardNumber, expiry, cvc;
 
-        // Validate card data
-        if (
-          cardNumber.match(/^\d{16}$/) &&
-          expiry.match(/^\d{2}\/\d{2}$/) &&
-          cvc.match(/^\d{3}$/)
-        ) {
-          cards.push({
-            id: `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-            number: cardNumber,
-            expiry: expiry,
-            cvc: cvc,
-            name: `Card ending in ${cardNumber.slice(-4)}`,
-            type: this.getCardType(cardNumber),
-          });
+      if (parts.length === 4) {
+        // New format: number|month|year|CVC
+        cardNumber = parts[0].trim();
+        const month = parts[1].trim();
+        const year = parts[2].trim();
+        cvc = parts[3].trim();
+
+        // Convert to MM/YY format with validation
+        expiry = this.formatExpiry(month, year);
+        if (!expiry) {
+          console.warn(
+            `Invalid month/year format: ${month}/${year} in line: ${line}`
+          );
+          continue;
         }
+      } else if (parts.length === 3) {
+        // Legacy format: number|MM/YY|CVC (exact match for backward compatibility)
+        cardNumber = parts[0].trim();
+        expiry = parts[1].trim();
+        cvc = parts[2].trim();
+      } else {
+        console.warn(
+          `Skipping invalid card format (expected 3 or 4 parts): ${line}`
+        );
+        continue;
+      }
+
+      // Clean card number (remove spaces and dashes)
+      const cleanNumber = cardNumber.replace(/[\s-]/g, "");
+
+      // Enhanced validation
+      if (
+        this.validateCardNumber(cleanNumber) &&
+        this.validateExpiry(expiry) &&
+        this.validateCVC(cvc)
+      ) {
+        cards.push({
+          id: `card_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          number: cleanNumber,
+          expiry: expiry,
+          cvc: cvc,
+          name: `Card ending in ${cleanNumber.slice(-4)}`,
+          type: this.getCardType(cleanNumber),
+        });
+
+        // Small delay to ensure unique IDs - use random factor instead of await
+        // to avoid making this function async
+      } else {
+        console.warn(`Invalid card data in line: ${line}`);
       }
     }
 
     return cards;
+  }
+
+  // Helper function to format month and year into MM/YY format
+  formatExpiry(month, year) {
+    // Validate month (1-12)
+    const monthNum = parseInt(month, 10);
+    if (isNaN(monthNum) || monthNum < 1 || monthNum > 12) {
+      return null;
+    }
+
+    // Validate year
+    const yearNum = parseInt(year, 10);
+    if (isNaN(yearNum)) {
+      return null;
+    }
+
+    // Pad month to 2 digits
+    const paddedMonth = monthNum.toString().padStart(2, "0");
+
+    // Get last 2 digits of year
+    let shortYear;
+    if (yearNum >= 2000) {
+      // 4-digit year (e.g., 2030 -> 30)
+      shortYear = yearNum.toString().slice(-2);
+    } else if (yearNum >= 0 && yearNum <= 99) {
+      // 2-digit year (e.g., 30 -> 30)
+      shortYear = yearNum.toString().padStart(2, "0");
+    } else {
+      return null;
+    }
+
+    return `${paddedMonth}/${shortYear}`;
+  }
+
+  // Validate card number (13-19 digits)
+  validateCardNumber(cardNumber) {
+    return /^\d{13,19}$/.test(cardNumber);
+  }
+
+  // Validate expiry format (MM/YY)
+  validateExpiry(expiry) {
+    return /^(0[1-9]|1[0-2])\/\d{2}$/.test(expiry);
+  }
+
+  // Validate CVC (3-4 digits)
+  validateCVC(cvc) {
+    return /^\d{3,4}$/.test(cvc);
   }
 
   // Detect card type based on number

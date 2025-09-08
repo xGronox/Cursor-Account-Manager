@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Test Card Parsing</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      .test-input {
+        width: 100%;
+        height: 120px;
+        margin: 10px 0;
+        font-family: monospace;
+      }
+      .test-output {
+        background: #f5f5f5;
+        padding: 10px;
+        margin: 10px 0;
+        border-radius: 3px;
+      }
+      .success {
+        color: green;
+      }
+      .error {
+        color: red;
+      }
+      .warning {
+        color: orange;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🧪 Test Card Data Parsing</h1>
+
+    <div class="test-section">
+      <h3>Format Lama (3 bagian): number|MM/YY|CVC</h3>
+      <textarea
+        class="test-input"
+        id="legacyInput"
+        placeholder="Paste legacy format cards here..."
+      >
+5524611630572816|02/31|891
+4532015112830366|12/28|456
+5555444433332222|06/25|123</textarea
+      >
+      <button onclick="testLegacyFormat()">Test Legacy Format</button>
+      <div id="legacyOutput" class="test-output"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Format Baru (4 bagian): number|month|year|CVC</h3>
+      <textarea
+        class="test-input"
+        id="newInput"
+        placeholder="Paste new format cards here..."
+      >
+5524616138528616|11|2030|727
+4532015112830366|5|2028|1234
+5555444433332222|1|25|456</textarea
+      >
+      <button onclick="testNewFormat()">Test New Format</button>
+      <div id="newOutput" class="test-output"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Format Campuran (Mixed)</h3>
+      <textarea
+        class="test-input"
+        id="mixedInput"
+        placeholder="Paste mixed format cards here..."
+      >
+5524611630572816|02/31|891
+5524616138528616|11|2030|727
+4532015112830366|12/28|456
+5555444433332222|1|25|456</textarea
+      >
+      <button onclick="testMixedFormat()">Test Mixed Format</button>
+      <div id="mixedOutput" class="test-output"></div>
+    </div>
+
+    <div class="test-section">
+      <h3>Invalid Data Tests</h3>
+      <textarea
+        class="test-input"
+        id="invalidInput"
+        placeholder="Paste invalid data here..."
+      >
+123|invalid|123
+5524616138528616|13|2030|727
+4532015112830366|12|invalid|456
+invalid_number|02/31|891
+5555444433332222|06/25|12345</textarea
+      >
+      <button onclick="testInvalidFormat()">Test Invalid Data</button>
+      <div id="invalidOutput" class="test-output"></div>
+    </div>
+
+    <script src="services/payment.js"></script>
+    <script>
+      // Create payment service instance for testing
+      const paymentService = new PaymentService();
+
+      function testLegacyFormat() {
+        const input = document.getElementById("legacyInput").value;
+        const output = document.getElementById("legacyOutput");
+
+        try {
+          console.log("🧪 Testing Legacy Format...");
+          const cards = paymentService.parseCardData(input);
+
+          let html = `<div class="success">✅ Parsed ${cards.length} cards successfully:</div>`;
+          cards.forEach((card, index) => {
+            html += `<div><strong>Card ${index + 1}:</strong> **** **** **** ${
+              card.lastFour
+            } | ${card.expiry} | CVC: ${card.cvc} | Type: ${card.type}</div>`;
+          });
+
+          output.innerHTML = html;
+        } catch (error) {
+          output.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        }
+      }
+
+      function testNewFormat() {
+        const input = document.getElementById("newInput").value;
+        const output = document.getElementById("newOutput");
+
+        try {
+          console.log("🧪 Testing New Format...");
+          const cards = paymentService.parseCardData(input);
+
+          let html = `<div class="success">✅ Parsed ${cards.length} cards successfully:</div>`;
+          cards.forEach((card, index) => {
+            html += `<div><strong>Card ${index + 1}:</strong> **** **** **** ${
+              card.lastFour
+            } | ${card.expiry} | CVC: ${card.cvc} | Type: ${card.type}</div>`;
+          });
+
+          output.innerHTML = html;
+        } catch (error) {
+          output.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        }
+      }
+
+      function testMixedFormat() {
+        const input = document.getElementById("mixedInput").value;
+        const output = document.getElementById("mixedOutput");
+
+        try {
+          console.log("🧪 Testing Mixed Format...");
+          const cards = paymentService.parseCardData(input);
+
+          let html = `<div class="success">✅ Parsed ${cards.length} cards successfully:</div>`;
+          cards.forEach((card, index) => {
+            html += `<div><strong>Card ${index + 1}:</strong> **** **** **** ${
+              card.lastFour
+            } | ${card.expiry} | CVC: ${card.cvc} | Type: ${card.type}</div>`;
+          });
+
+          output.innerHTML = html;
+        } catch (error) {
+          output.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        }
+      }
+
+      function testInvalidFormat() {
+        const input = document.getElementById("invalidInput").value;
+        const output = document.getElementById("invalidOutput");
+
+        try {
+          console.log("🧪 Testing Invalid Data...");
+
+          // Capture console warnings
+          const originalWarn = console.warn;
+          const warnings = [];
+          console.warn = function (...args) {
+            warnings.push(args.join(" "));
+            originalWarn.apply(console, args);
+          };
+
+          const cards = paymentService.parseCardData(input);
+
+          // Restore console.warn
+          console.warn = originalWarn;
+
+          let html = `<div class="warning">⚠️ Parsed ${cards.length} valid cards, ${warnings.length} warnings:</div>`;
+
+          if (warnings.length > 0) {
+            html += "<div><strong>Warnings:</strong></div>";
+            warnings.forEach((warning) => {
+              html += `<div class="warning">- ${warning}</div>`;
+            });
+          }
+
+          if (cards.length > 0) {
+            html += "<div><strong>Valid Cards:</strong></div>";
+            cards.forEach((card, index) => {
+              html += `<div>Card ${index + 1}: **** **** **** ${
+                card.lastFour
+              } | ${card.expiry} | CVC: ${card.cvc} | Type: ${card.type}</div>`;
+            });
+          }
+
+          output.innerHTML = html;
+        } catch (error) {
+          output.innerHTML = `<div class="error">❌ Error: ${error.message}</div>`;
+        }
+      }
+
+      // Test format expiry function specifically
+      function testFormatExpiry() {
+        console.log("🧪 Testing formatExpiry function...");
+
+        const testCases = [
+          { month: "1", year: "2025", expected: "01/25" },
+          { month: "11", year: "2030", expected: "11/30" },
+          { month: "5", year: "28", expected: "05/28" },
+          { month: "12", year: "2024", expected: "12/24" },
+          { month: "0", year: "2025", expected: null }, // Invalid month
+          { month: "13", year: "2025", expected: null }, // Invalid month
+          { month: "6", year: "invalid", expected: null }, // Invalid year
+        ];
+
+        testCases.forEach((test) => {
+          const result = paymentService.formatExpiry(test.month, test.year);
+          const status = result === test.expected ? "✅" : "❌";
+          console.log(
+            `${status} formatExpiry(${test.month}, ${test.year}) = ${result} (expected: ${test.expected})`
+          );
+        });
+      }
+
+      // Run formatExpiry tests on page load
+      document.addEventListener("DOMContentLoaded", () => {
+        testFormatExpiry();
+      });
+    </script>
+  </body>
+</html>

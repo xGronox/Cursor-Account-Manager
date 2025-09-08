@@ -138,6 +138,19 @@ class CursorAccountSidebar {
         this.showStoredData();
       });
 
+    // Account deletion functionality
+    document
+      .getElementById("deleteFreeAccountBtn")
+      .addEventListener("click", () => {
+        this.deleteFreeAccount();
+      });
+
+    document
+      .getElementById("deleteProTrialAccountBtn")
+      .addEventListener("click", () => {
+        this.deleteProTrialAccount();
+      });
+
     // Refresh button
     document.getElementById("refreshBtn").addEventListener("click", () => {
       this.loadAccounts();
@@ -1273,6 +1286,170 @@ Choose NO if you want to keep the backup file.`
       console.error("Error showing stored data:", error);
       this.showNotification("Error showing stored data", "error");
     }
+  }
+
+  // Account Deletion Methods
+  async deleteFreeAccount() {
+    const confirmed = confirm(
+      "⚠️ DELETE FREE ACCOUNT\n\n" +
+        "This will PERMANENTLY delete your Cursor account.\n" +
+        "This action CANNOT be undone.\n\n" +
+        "The process will:\n" +
+        "1. Open Cursor dashboard settings\n" +
+        "2. Automatically click delete\n" +
+        "3. Fill confirmation text\n" +
+        "4. Complete account deletion\n\n" +
+        "Are you absolutely sure you want to continue?"
+    );
+
+    if (!confirmed) return;
+
+    const doubleConfirm = confirm(
+      "🚨 FINAL WARNING\n\n" +
+        "This will permanently delete your FREE Cursor account.\n" +
+        "All your settings, preferences, and data will be lost.\n\n" +
+        "Type YES in the next prompt if you're sure."
+    );
+
+    if (!doubleConfirm) return;
+
+    const finalConfirm = prompt(
+      "Type 'DELETE FREE ACCOUNT' to confirm permanent deletion:"
+    );
+
+    if (finalConfirm !== "DELETE FREE ACCOUNT") {
+      this.showNotification("Account deletion cancelled", "info");
+      return;
+    }
+
+    try {
+      this.showLoading(true);
+      this.showNotification("Initiating free account deletion...", "info");
+
+      const response = await chrome.runtime.sendMessage({
+        type: "deleteFreeAccount",
+      });
+
+      if (response.success) {
+        this.showNotification(
+          "Free account deletion initiated! Check the opened tab.",
+          "success"
+        );
+
+        // Monitor deletion status
+        this.monitorDeletionStatus();
+      } else {
+        this.showNotification(
+          "Failed to initiate account deletion: " + response.error,
+          "error"
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting free account:", error);
+      this.showNotification("Error initiating account deletion", "error");
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  async deleteProTrialAccount() {
+    const confirmed = confirm(
+      "⚠️ DELETE PRO TRIAL ACCOUNT\n\n" +
+        "This will PERMANENTLY delete your Cursor Pro Trial account.\n" +
+        "This action CANNOT be undone.\n\n" +
+        "The process will:\n" +
+        "1. Open Cursor dashboard billing\n" +
+        "2. Open Stripe billing portal\n" +
+        "3. Cancel your subscription\n" +
+        "4. Delete your account\n\n" +
+        "Are you absolutely sure you want to continue?"
+    );
+
+    if (!confirmed) return;
+
+    const doubleConfirm = confirm(
+      "🚨 FINAL WARNING\n\n" +
+        "This will permanently delete your PRO TRIAL Cursor account.\n" +
+        "Your subscription will be cancelled and account deleted.\n" +
+        "All your settings, preferences, and data will be lost.\n\n" +
+        "Type YES in the next prompt if you're sure."
+    );
+
+    if (!doubleConfirm) return;
+
+    const finalConfirm = prompt(
+      "Type 'DELETE PRO TRIAL ACCOUNT' to confirm permanent deletion:"
+    );
+
+    if (finalConfirm !== "DELETE PRO TRIAL ACCOUNT") {
+      this.showNotification("Account deletion cancelled", "info");
+      return;
+    }
+
+    try {
+      this.showLoading(true);
+      this.showNotification("Initiating pro trial account deletion...", "info");
+
+      const response = await chrome.runtime.sendMessage({
+        type: "deleteProTrialAccount",
+      });
+
+      if (response.success) {
+        this.showNotification(
+          "Pro trial account deletion initiated! Check the opened tabs.",
+          "success"
+        );
+
+        // Monitor deletion status
+        this.monitorDeletionStatus();
+      } else {
+        this.showNotification(
+          "Failed to initiate account deletion: " + response.error,
+          "error"
+        );
+      }
+    } catch (error) {
+      console.error("Error deleting pro trial account:", error);
+      this.showNotification("Error initiating account deletion", "error");
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  // Monitor deletion status
+  async monitorDeletionStatus() {
+    const maxChecks = 60; // Check for 1 minute
+    let checks = 0;
+
+    const checkStatus = async () => {
+      checks++;
+
+      try {
+        const response = await chrome.runtime.sendMessage({
+          type: "checkDeletionStatus",
+        });
+
+        if (response.success && response.inProgress) {
+          if (checks < maxChecks) {
+            setTimeout(checkStatus, 1000); // Check every second
+          } else {
+            this.showNotification(
+              "Deletion process taking longer than expected. Please check manually.",
+              "info"
+            );
+          }
+        } else {
+          this.showNotification(
+            "Account deletion process completed.",
+            "success"
+          );
+        }
+      } catch (error) {
+        console.error("Error checking deletion status:", error);
+      }
+    };
+
+    setTimeout(checkStatus, 2000); // Start checking after 2 seconds
   }
 
   escapeHtml(text) {
