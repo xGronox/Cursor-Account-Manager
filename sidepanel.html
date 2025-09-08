@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cursor Account Manager - Sidebar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <div id="sidebar-app">
+      <!-- Header -->
+      <div class="sidebar-header">
+        <div class="title">
+          <span class="icon">👤</span>
+          <h2>Cursor Accounts</h2>
+        </div>
+        <div class="header-actions">
+          <button id="darkModeToggle" class="icon-btn" title="Toggle Dark Mode">
+            🌙
+          </button>
+          <button id="refreshBtn" class="icon-btn" title="Refresh">🔄</button>
+        </div>
+      </div>
+
+      <!-- Debug Panel (Hidden by default) -->
+      <div class="debug-section">
+        <button
+          id="debugToggle"
+          class="btn btn-link btn-sm debug-toggle"
+          style="display: none"
+          title="Toggle Debug Panel (Ctrl+Shift+D)"
+        >
+          🐛 Debug
+        </button>
+        <div id="debugPanel" class="debug-panel" style="display: none">
+          <h3>Debug Tools</h3>
+          <div class="debug-actions">
+            <button id="showStoredDataBtn" class="btn btn-secondary btn-sm">
+              📄 Show Data
+            </button>
+            <button id="clearAllDataBtn" class="btn btn-danger btn-sm">
+              🗑️ Clear All
+            </button>
+            <button
+              id="consolidateDuplicatesBtn"
+              class="btn btn-secondary btn-sm"
+            >
+              🔧 Fix Duplicates
+            </button>
+          </div>
+          <div id="debugOutput" class="debug-output"></div>
+        </div>
+      </div>
+
+      <!-- Current Account Section -->
+      <div class="current-account-section">
+        <div class="current-label">Active Account</div>
+        <div class="current-account" id="currentAccount">
+          <span class="account-icon">🔴</span>
+          <div class="account-details">
+            <span class="account-name">Not logged in</span>
+            <span class="account-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button id="accountsTab" class="tab-btn active">👤 Accounts</button>
+        <button id="paymentsTab" class="tab-btn">💳 Cards</button>
+      </div>
+
+      <!-- Accounts Tab Content -->
+      <div id="accountsContent" class="tab-content">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <button id="addAccountBtn" class="btn btn-primary btn-sm">
+            ➕ Add Account
+          </button>
+          <button id="exportCurrentBtn" class="btn btn-secondary btn-sm">
+            💾 Export
+          </button>
+          <button id="importFromDownloadsBtn" class="btn btn-secondary btn-sm">
+            📁 Import Files
+          </button>
+          <button id="toggleAdvancedBtn" class="btn btn-link btn-sm">
+            ⚙️ Advanced Tools
+          </button>
+        </div>
+
+        <!-- Advanced Actions (collapsible) -->
+        <div class="advanced-actions">
+          <div id="advancedPanel" class="advanced-panel" style="display: none">
+            <button id="importFolderBtn" class="btn btn-secondary btn-sm">
+              📂 Import Folder
+            </button>
+            <button
+              id="consolidateDuplicatesBtn"
+              class="btn btn-secondary btn-sm"
+            >
+              🔧 Fix Duplicates
+            </button>
+            <button id="clearAllDataBtn" class="btn btn-danger btn-sm">
+              🗑️ Clear All Data
+            </button>
+          </div>
+        </div>
+
+        <!-- Accounts List -->
+        <div class="accounts-section">
+          <div class="section-header">
+            <h3>Accounts</h3>
+            <span id="accountsCount" class="count">(0)</span>
+          </div>
+
+          <div id="accountsList" class="sidebar-accounts-list">
+            <!-- Accounts will be populated here -->
+          </div>
+
+          <div id="noAccounts" class="empty-state" style="display: none">
+            <div class="empty-icon">📁</div>
+            <p>No accounts</p>
+            <p class="hint">Click ➕ to add</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payments Tab Content -->
+      <div id="paymentsContent" class="tab-content" style="display: none">
+        <!-- Payment Controls -->
+        <div class="controls-section">
+          <button id="importCardsBtn" class="btn btn-primary btn-sm">
+            ➕ Import Cards
+          </button>
+          <button id="findPaymentFieldsBtn" class="btn btn-secondary btn-sm">
+            🔍 Find Fields
+          </button>
+          <button id="clearCardsBtn" class="btn btn-danger btn-sm">
+            🗑️ Clear All
+          </button>
+        </div>
+
+        <!-- Payment Cards List -->
+        <div class="cards-section">
+          <div class="section-header">
+            <h3>Payment Cards</h3>
+            <span class="cards-count" id="cardsCount">(0)</span>
+          </div>
+
+          <div id="cardsList" class="cards-list">
+            <!-- Cards will be populated here -->
+          </div>
+
+          <div id="noCards" class="empty-state" style="display: none">
+            <div class="empty-icon">💳</div>
+            <p>No payment cards imported</p>
+            <p class="hint">
+              Click "Import Cards" to load card data from card.md files
+            </p>
+          </div>
+
+          <!-- Payment Form Detection -->
+          <div id="paymentFormInfo" class="form-info" style="display: none">
+            <div class="info-header">Payment Form Detected</div>
+            <div id="formFieldsInfo"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="loadingOverlay" class="loading-overlay" style="display: none">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+      </div>
+
+      <!-- Notification -->
+      <div id="notification" class="notification" style="display: none">
+        <span id="notificationText"></span>
+      </div>
+    </div>
+
+    <!-- Account Item Template -->
+    <template id="sidebarAccountTemplate">
+      <div class="sidebar-account-item" data-account="">
+        <div class="account-info">
+          <div class="account-avatar">
+            <span class="account-icon">👤</span>
+            <div class="active-indicator">✓</div>
+          </div>
+          <div class="account-details">
+            <div class="account-email"></div>
+            <div class="account-meta">
+              <span class="account-status"></span>
+            </div>
+          </div>
+        </div>
+        <div class="account-actions">
+          <button class="reveal-btn" title="Show file in folder">📁</button>
+          <button class="delete-btn" title="Delete account">🗑️</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Card Item Template -->
+    <template id="sidebarCardTemplate">
+      <div class="card-item" data-card-id="">
+        <div class="card-info">
+          <div class="card-icon">
+            <span class="card-type-icon">💳</span>
+          </div>
+          <div class="card-details">
+            <div class="card-number"></div>
+            <div class="card-meta">
+              <span class="card-expiry"></span>
+              <span class="card-type"></span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="fill-btn" title="Auto-fill this card">✨</button>
+          <button class="remove-card-btn" title="Remove card">🗑️</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Add Account Modal -->
+    <div id="addAccountModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add Account</h3>
+          <button class="modal-close" id="closeModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>Paste your Cursor account cookies JSON here:</p>
+          <textarea
+            id="cookiesInput"
+            rows="6"
+            placeholder='[{"name": "SessionToken", "value": "...", ...}]'
+          ></textarea>
+          <div class="form-group">
+            <label for="accountNameInput">Account Name (optional):</label>
+            <input
+              type="text"
+              id="accountNameInput"
+              placeholder="Auto-generated if empty"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="confirmAddBtn" class="btn btn-primary">Add</button>
+          <button id="cancelAddBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Cards Modal -->
+    <div id="importCardsModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Payment Cards</h3>
+          <button class="modal-close" id="closeCardsModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>Paste your card data here (format: number|MM/YY|CVC):</p>
+          <textarea
+            id="cardsInput"
+            rows="6"
+            placeholder="5598880392588168|06/32|004
+5598880392572030|11/31|157
+..."
+          ></textarea>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="replaceCardsCheck" />
+              Replace existing cards (otherwise merge)
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="confirmImportCardsBtn" class="btn btn-primary">
+            Import Cards
+          </button>
+          <button id="cancelImportCardsBtn" class="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden File Inputs -->
+    <input
+      type="file"
+      id="downloadsFileInput"
+      multiple
+      accept=".json"
+      style="display: none"
+    />
+    <input
+      type="file"
+      id="folderInput"
+      webkitdirectory
+      multiple
+      style="display: none"
+    />
+    <input
+      id="cardsFileInput"
+      type="file"
+      accept=".md,.txt,.json"
+      multiple
+      style="display: none"
+    />
+
+    <script src="services/payment.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
