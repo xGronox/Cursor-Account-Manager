@@ -212,93 +212,53 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   }
 
                   // Step 1: Try to find email from title attributes first (most reliable)
-                  console.log(
-                    "Step 1: Looking for div with title containing @"
-                  );
                   const divsWithEmailTitle =
                     document.querySelectorAll('div[title*="@"]');
-                  console.log(
-                    "Found divs with email title:",
-                    divsWithEmailTitle.length
-                  );
 
                   for (const div of divsWithEmailTitle) {
                     const title = div.getAttribute("title");
-                    console.log("Checking div title:", title);
                     if (title && title.includes("@")) {
                       const emailMatch = title.match(
                         /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
                       );
                       if (emailMatch) {
                         email = emailMatch[1];
-                        console.log("Found email from div title:", email);
                         break;
                       }
                     }
                   }
 
-                  // Step 2: If no email from title, try text content with simple selectors
+                  // Step 2: If no email from title, try text content from p tags
                   if (!email) {
-                    console.log("Step 2: Looking for email in text content");
-
-                    // First try: Look specifically for p tags with text containing @
                     const allPTags = document.querySelectorAll("p");
-                    console.log("Found p tags:", allPTags.length);
 
                     for (const p of allPTags) {
                       const text = p.textContent?.trim();
-                      console.log("Checking p tag text:", text);
                       if (text && text.includes("@")) {
                         const emailMatch = text.match(
                           /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
                         );
                         if (emailMatch) {
                           email = emailMatch[1];
-                          console.log(
-                            "✅ Found email from p tag:",
-                            email,
-                            "Class:",
-                            p.className
-                          );
                           break;
                         }
                       }
                     }
 
-                    // Fallback: Try all elements containing @
+                    // Fallback: Try other elements containing @
                     if (!email) {
-                      console.log("Step 2b: Fallback - checking all elements");
-                      const emailSelectors = [
-                        "div p", // p inside div
-                        "*", // All elements as last resort
-                      ];
-
-                      for (const selector of emailSelectors) {
-                        console.log("Trying selector:", selector);
-                        const elements = document.querySelectorAll(selector);
-                        console.log("Found elements:", elements.length);
-
-                        for (const el of elements) {
-                          const text = el.textContent?.trim();
-                          if (text && text.includes("@") && text.length < 100) {
-                            // Avoid huge text blocks
-                            const emailMatch = text.match(
-                              /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
-                            );
-                            if (emailMatch) {
-                              email = emailMatch[1];
-                              console.log(
-                                "Found email from fallback:",
-                                email,
-                                "in element:",
-                                el.tagName,
-                                el.className
-                              );
-                              break;
-                            }
+                      const allElements = document.querySelectorAll("*");
+                      for (const el of allElements) {
+                        const text = el.textContent?.trim();
+                        if (text && text.includes("@") && text.length < 100) {
+                          const emailMatch = text.match(
+                            /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
+                          );
+                          if (emailMatch) {
+                            email = emailMatch[1];
+                            break;
                           }
                         }
-                        if (email) break;
                       }
                     }
                   }
@@ -502,7 +462,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
                   }
 
-                  console.log("Initial extraction:", {
+                  // Debug logging (can be removed in production)
+                  console.log("Extracted account info:", {
                     username,
                     email,
                     status,
@@ -510,35 +471,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 
                   // Fallback logic for username and email
                   if (!email && username) {
-                    // Use username as fallback for email if email not found
                     email = username;
-                    console.log("Using username as email fallback");
                   }
 
-                  // Special case: If we have email but no separate username,
-                  // try to extract just the local part before @ as username
+                  // Extract username from email if no separate username found
                   if (email && !username) {
                     const emailParts = email.split("@");
                     if (emailParts.length > 1 && emailParts[0].length > 2) {
                       username = emailParts[0]; // e.g., "vogogek963" from "vogogek963@namestal.com"
-                      console.log("Extracted username from email:", username);
                     } else {
                       username = email; // Fallback to full email
-                      console.log("Using full email as username fallback");
                     }
                   }
 
                   // Final fallback: if still no username, use email
                   if (!username && email) {
                     username = email;
-                    console.log("Final fallback: using email as username");
                   }
-
-                  console.log("Final extracted account info:", {
-                    username,
-                    email,
-                    status,
-                  });
 
                   return { username, email, status };
                 };

@@ -179,6 +179,13 @@ class CursorAccountSidebar {
       }
     }, 100);
 
+    // Remove manual detect info button event listener if exists
+    const detectInfoBtn = document.getElementById("detectAccountInfoBtn");
+    if (detectInfoBtn) {
+      detectInfoBtn.style.display = "none";
+      detectInfoBtn.replaceWith(detectInfoBtn.cloneNode(true)); // Remove all listeners
+    }
+
     // Card filter and selection functionality
     document
       .getElementById("cardFilterInput")
