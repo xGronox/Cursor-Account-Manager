@@ -83,6 +83,13 @@ class CursorAccountSidebar {
         this.toggleAdvancedPanel();
       });
 
+    // Refresh status button
+    document
+      .getElementById("refreshStatusBtn")
+      .addEventListener("click", () => {
+        this.forceRefreshStatus();
+      });
+
     // Consolidate duplicates button
     document
       .getElementById("consolidateDuplicatesBtn")
@@ -342,15 +349,16 @@ class CursorAccountSidebar {
     }
   }
 
-  async updateAccountInfo() {
+  async updateAccountInfo(force = false) {
     if (this.activeAccount) {
       // Check if this account already has proper email info
       const currentAccount = this.accounts.find(
         (acc) => acc.name === this.activeAccount
       );
 
-      // Skip if we already have proper account info (email or meaningful username)
+      // Skip if we already have proper account info (unless force refresh)
       if (
+        !force &&
         currentAccount &&
         currentAccount.email &&
         currentAccount.email !== this.activeAccount &&
@@ -384,6 +392,29 @@ class CursorAccountSidebar {
       } catch (error) {
         console.log("Could not update account info:", error);
       }
+    }
+  }
+
+  // Force refresh account status (called by refresh button)
+  async forceRefreshStatus() {
+    if (!this.activeAccount) {
+      this.showNotification("No active account to refresh", "warning");
+      return;
+    }
+
+    try {
+      this.showLoading(true);
+      this.showNotification("Refreshing account status...", "info");
+
+      // Force update account info (bypass skip condition)
+      await this.updateAccountInfo(true);
+
+      this.showNotification("Account status refreshed!", "success");
+    } catch (error) {
+      console.error("Error refreshing status:", error);
+      this.showNotification("Failed to refresh status", "error");
+    } finally {
+      this.showLoading(false);
     }
   }
 
