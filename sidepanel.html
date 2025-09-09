@@ -86,6 +86,9 @@
           <button id="toggleAdvancedBtn" class="btn btn-link btn-sm">
             ⚙️ Advanced Tools
           </button>
+          <button id="detectAccountInfoBtn" class="btn btn-secondary btn-sm">
+            🔍 Detect Info
+          </button>
         </div>
 
         <!-- Advanced Actions (collapsible) -->
@@ -120,7 +123,27 @@
             <span id="accountsCount" class="count">(0)</span>
           </div>
 
-          <div id="accountsList" class="sidebar-accounts-list">
+          <!-- Account Filters -->
+          <div class="account-filters">
+            <div class="filter-row">
+              <input
+                type="text"
+                id="accountFilterInput"
+                placeholder="Filter accounts by name, email..."
+                class="filter-input"
+              />
+              <select id="accountStatusFilter" class="filter-select">
+                <option value="">All Status</option>
+                <option value="free">Free</option>
+                <option value="pro trial">Pro Trial</option>
+                <option value="pro plan">Pro Plan</option>
+                <option value="business">Business</option>
+                <option value="empty">Empty Status</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="accountsList" class="sidebar-accounts-list scrollable">
             <!-- Accounts will be populated here -->
           </div>
 
@@ -138,6 +161,9 @@
         <div class="controls-section">
           <button id="importCardsBtn" class="btn btn-primary btn-sm">
             ➕ Import Cards
+          </button>
+          <button id="exportCardsBtn" class="btn btn-success btn-sm">
+            📤 Export Cards
           </button>
           <button id="findPaymentFieldsBtn" class="btn btn-secondary btn-sm">
             🔍 Find Fields
@@ -187,7 +213,7 @@
             </div>
           </div>
 
-          <div id="cardsList" class="cards-list">
+          <div id="cardsList" class="cards-list scrollable">
             <!-- Cards will be populated here -->
           </div>
 

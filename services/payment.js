@@ -184,6 +184,19 @@ class PaymentService {
     return newCards.length;
   }
 
+  // Export cards to text format
+  async exportCards() {
+    const exportData = [];
+
+    for (const card of this.cards) {
+      // Export in the format: number|MM/YY|CVC
+      const line = `${card.number}|${card.expiry}|${card.cvc}`;
+      exportData.push(line);
+    }
+
+    return exportData;
+  }
+
   // Save cards to storage
   async saveCards() {
     try {

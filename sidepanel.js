@@ -12,6 +12,10 @@ class CursorAccountSidebar {
       search: "",
       type: "",
     };
+    this.accountFilters = {
+      search: "",
+      status: "",
+    };
     this.init();
   }
 
@@ -96,6 +100,10 @@ class CursorAccountSidebar {
       this.showImportCardsModal();
     });
 
+    document.getElementById("exportCardsBtn").addEventListener("click", () => {
+      this.exportCards();
+    });
+
     document
       .getElementById("findPaymentFieldsBtn")
       .addEventListener("click", () => {
@@ -143,6 +151,33 @@ class CursorAccountSidebar {
         this.clearSelection();
       });
     }
+
+    // Account filter functionality - Fixed Event Listeners
+    setTimeout(() => {
+      const accountFilterInput = document.getElementById("accountFilterInput");
+      if (accountFilterInput) {
+        accountFilterInput.addEventListener("input", (e) => {
+          this.accountFilters.search = e.target.value.toLowerCase();
+          this.filterAccounts();
+        });
+        console.log("Account filter input listener added");
+      } else {
+        console.log("Account filter input not found");
+      }
+
+      const accountStatusFilter = document.getElementById(
+        "accountStatusFilter"
+      );
+      if (accountStatusFilter) {
+        accountStatusFilter.addEventListener("change", (e) => {
+          this.accountFilters.status = e.target.value.toLowerCase();
+          this.filterAccounts();
+        });
+        console.log("Account status filter listener added");
+      } else {
+        console.log("Account status filter not found");
+      }
+    }, 100);
 
     // Card filter and selection functionality
     document
@@ -307,12 +342,12 @@ class CursorAccountSidebar {
         (acc) => acc.name === this.activeAccount
       );
 
-      // Skip if we already have a proper email
+      // Skip if we already have proper account info (email or meaningful username)
       if (
         currentAccount &&
         currentAccount.email &&
         currentAccount.email !== this.activeAccount &&
-        currentAccount.email.includes("@")
+        (currentAccount.email.includes("@") || currentAccount.email.length > 10)
       ) {
         return;
       }
@@ -323,12 +358,14 @@ class CursorAccountSidebar {
         });
 
         if (infoResponse && infoResponse.success && infoResponse.data) {
-          const { email, status } = infoResponse.data;
-          if (email && email.includes("@")) {
+          const { username, email, status } = infoResponse.data;
+          // Use email for account info, or fallback to username if no email
+          const accountEmail = email || username;
+          if (accountEmail) {
             await chrome.runtime.sendMessage({
               type: "updateAccountInfo",
               account: this.activeAccount,
-              email: email,
+              email: accountEmail,
               status: status || "free",
             });
             setTimeout(() => {
@@ -384,16 +421,35 @@ class CursorAccountSidebar {
   updateAccountsList() {
     const listEl = document.getElementById("accountsList");
     const emptyEl = document.getElementById("noAccounts");
+    const countEl = document.getElementById("accountsCount");
 
     if (this.accounts.length === 0) {
       listEl.style.display = "none";
       emptyEl.style.display = "block";
+      if (countEl) countEl.textContent = "(0)";
+
+      // Hide filters when no accounts
+      const filtersElement = document.querySelector(".account-filters");
+      if (filtersElement) {
+        filtersElement.style.display = "none";
+      }
       return;
+    }
+
+    // Show filters when accounts exist
+    const filtersElement = document.querySelector(".account-filters");
+    if (filtersElement) {
+      filtersElement.style.display = "block";
     }
 
     listEl.style.display = "block";
     emptyEl.style.display = "none";
     listEl.innerHTML = "";
+
+    // Ensure scrollable class is applied
+    if (!listEl.classList.contains("scrollable")) {
+      listEl.classList.add("scrollable");
+    }
 
     // Sort accounts - active first
     const sortedAccounts = [...this.accounts].sort((a, b) => {
@@ -406,6 +462,15 @@ class CursorAccountSidebar {
       const accountEl = this.createAccountElement(account);
       listEl.appendChild(accountEl);
     });
+
+    if (countEl) countEl.textContent = `(${this.accounts.length})`;
+
+    // Apply current filters after DOM update
+    setTimeout(() => {
+      if (this.filterAccounts) {
+        this.filterAccounts();
+      }
+    }, 50);
   }
 
   createAccountElement(account) {
@@ -413,7 +478,8 @@ class CursorAccountSidebar {
     const element = template.content.cloneNode(true);
     const container = element.querySelector(".sidebar-account-item");
 
-    // Set account data
+    // Set account data - Fixed attribute name
+    container.setAttribute("data-account-name", account.name);
     container.dataset.account = account.name;
 
     // Set email
@@ -1076,6 +1142,11 @@ Choose NO if you want to keep the backup file.`
         this.paymentCards.length > 0 ? "block" : "none";
     }
 
+    // Ensure scrollable class is applied to cards list
+    if (!listEl.classList.contains("scrollable")) {
+      listEl.classList.add("scrollable");
+    }
+
     this.paymentCards.forEach((card) => {
       const cardEl = this.createCardElement(card);
       listEl.appendChild(cardEl);
@@ -1314,6 +1385,111 @@ Choose NO if you want to keep the backup file.`
     }
   }
 
+  // Account filtering functionality - FIXED
+  filterAccounts() {
+    console.log("filterAccounts called", this.accountFilters);
+
+    if (!this.accountFilters) {
+      console.log("No account filters initialized");
+      return;
+    }
+
+    const accountsList = document.getElementById("accountsList");
+    if (!accountsList) {
+      console.log("Accounts list not found");
+      return;
+    }
+
+    const accountItems = accountsList.querySelectorAll(".sidebar-account-item");
+    console.log(`Found ${accountItems.length} account items to filter`);
+
+    let visibleCount = 0;
+
+    accountItems.forEach((accountItem) => {
+      const accountName =
+        accountItem.getAttribute("data-account-name") ||
+        accountItem.getAttribute("data-account");
+      const account = this.accounts.find((acc) => acc.name === accountName);
+
+      console.log(
+        `Processing account item with name: ${accountName}, found account:`,
+        account
+      );
+
+      if (!account) {
+        console.log(`Account not found for: ${accountName}`);
+        accountItem.style.display = "none";
+        return;
+      }
+
+      // Get account info from different sources
+      const accountInfo = account.info || {};
+      const accountStatus = (
+        accountInfo.status ||
+        account.status ||
+        ""
+      ).toLowerCase();
+      const accountEmail = (
+        accountInfo.email ||
+        account.email ||
+        account.name ||
+        ""
+      ).toLowerCase();
+
+      console.log(
+        `Filtering account: ${account.name}, status: ${accountStatus}, email: ${accountEmail}`
+      );
+
+      const matchesSearch =
+        !this.accountFilters.search ||
+        account.name.toLowerCase().includes(this.accountFilters.search) ||
+        accountEmail.includes(this.accountFilters.search) ||
+        accountStatus.includes(this.accountFilters.search);
+
+      let matchesStatus = true;
+      if (this.accountFilters.status && this.accountFilters.status !== "") {
+        if (this.accountFilters.status === "empty") {
+          // Filter for empty status
+          matchesStatus = !accountStatus || accountStatus === "";
+        } else {
+          // Handle "pro plan" vs "pro" compatibility
+          if (this.accountFilters.status === "pro plan") {
+            matchesStatus =
+              accountStatus === "pro plan" || accountStatus === "pro";
+          } else {
+            matchesStatus = accountStatus === this.accountFilters.status;
+          }
+        }
+      }
+      // If accountFilters.status is empty string (""), show all (matchesStatus = true)
+
+      const shouldShow = matchesSearch && matchesStatus;
+      accountItem.style.display = shouldShow ? "flex" : "none";
+
+      console.log(
+        `Account ${account.name}: matchesSearch=${matchesSearch}, matchesStatus=${matchesStatus}, shouldShow=${shouldShow}, display=${accountItem.style.display}`
+      );
+
+      if (shouldShow) {
+        visibleCount++;
+      }
+    });
+
+    // Update account count with filtered results
+    const accountCount = document.getElementById("accountsCount");
+    if (accountCount) {
+      if (this.accountFilters.search || this.accountFilters.status) {
+        accountCount.textContent = `(${visibleCount}/${this.accounts.length})`;
+      } else {
+        accountCount.textContent = `(${this.accounts.length})`;
+      }
+    }
+
+    console.log(
+      `Filter result: ${visibleCount}/${this.accounts.length} accounts visible`
+    );
+  }
+
   // Show import cards modal
   showImportCardsModal() {
     document.getElementById("importCardsModal").style.display = "block";
@@ -1394,6 +1570,54 @@ Choose NO if you want to keep the backup file.`
     } finally {
       this.showLoading(false);
       document.getElementById("cardsFileInput").value = "";
+    }
+  }
+
+  // Export cards to file
+  async exportCards() {
+    try {
+      this.showLoading(true);
+
+      const response = await chrome.runtime.sendMessage({
+        type: "exportPaymentCards",
+      });
+
+      if (response.success) {
+        if (response.data.length === 0) {
+          this.showNotification("No cards to export", "warning");
+          return;
+        }
+
+        // Create a blob with the card data
+        const cardData = response.data.join("\n");
+        const blob = new Blob([cardData], { type: "text/plain" });
+
+        // Create download link
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `cursor_payment_cards_${new Date()
+          .toISOString()
+          .slice(0, 10)}.txt`;
+
+        // Trigger download
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.showNotification(
+          `Exported ${response.data.length} cards`,
+          "success"
+        );
+      } else {
+        this.showNotification("Failed to export cards", "error");
+      }
+    } catch (error) {
+      console.error("Error exporting cards:", error);
+      this.showNotification("Error exporting cards", "error");
+    } finally {
+      this.showLoading(false);
     }
   }
 

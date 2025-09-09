@@ -191,46 +191,98 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                 // This runs in the page context
                 const extractInfo = () => {
                   let email = null;
+                  let username = null;
                   let status = "unknown";
 
-                  // Find email
-                  const emailEls = document.querySelectorAll(
-                    'p.truncate.text-sm.font-medium, [class*="truncate"][class*="font-medium"]'
-                  );
-                  for (const el of emailEls) {
-                    const text = el.textContent.trim();
-                    if (text && text.includes("@")) {
-                      email = text;
-                      break;
+                  // Find username first (names without @)
+                  const nameSelectors = [
+                    'p[class*="truncate"][class*="text-sm"][class*="font-medium"]',
+                    "p.truncate.text-sm.font-medium",
+                    '[class*="font-medium"][class*="truncate"]',
+                  ];
+
+                  for (const selector of nameSelectors) {
+                    const nameEls = document.querySelectorAll(selector);
+                    for (const el of nameEls) {
+                      const text = el.textContent.trim();
+                      // Look for username (non-email text)
+                      if (text && !text.includes("@") && text.length > 1) {
+                        username = text;
+                        break;
+                      }
                     }
+                    if (username) break;
                   }
 
-                  // Find status - enhanced selectors for better detection
+                  // Find email from title attributes and text content
+                  const emailSelectors = [
+                    'div[title*="@"]', // From title attribute
+                    'p[class*="truncate"][class*="text-sm"][class*="font-medium"]',
+                    '[class*="truncate"][class*="font-medium"]',
+                  ];
+
+                  for (const selector of emailSelectors) {
+                    const emailEls = document.querySelectorAll(selector);
+                    for (const el of emailEls) {
+                      let text = "";
+
+                      // Check title attribute first
+                      if (el.getAttribute && el.getAttribute("title")) {
+                        const title = el.getAttribute("title");
+                        const emailMatch = title.match(
+                          /([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/
+                        );
+                        if (emailMatch) {
+                          text = emailMatch[1];
+                        }
+                      }
+
+                      // Fallback to text content
+                      if (!text) {
+                        text = el.textContent.trim();
+                      }
+
+                      if (text && text.includes("@")) {
+                        email = text;
+                        break;
+                      }
+                    }
+                    if (email) break;
+                  }
+
+                  console.log("Looking for account status on page...");
+
+                  // Find status - UPDATED WITH SPECIFIC SELECTORS FROM USER
                   const statusSelectors = [
-                    // New complex class selector for Pro Trial
+                    // HIGHEST PRIORITY: User-provided specific selectors
+                    'div[class*="flex min-w-0 items-center gap-1"][title*="Pro Trial"]',
+                    'div[class*="flex min-w-0 items-center gap-1"][title*="Free"]',
+                    'div[class*="flex min-w-0 items-center gap-1"][title*="Pro Plan"]',
+                    'div[class*="flex min-w-0 items-center gap-1"][title*="Business"]',
+                    // Specific p tag from user example
                     'p[class*="flex-shrink-0"][class*="text-sm"][class*="text-brand-gray-300"]',
-                    // Specific selector for div with title Pro Trial
+                    // More flexible versions of the above
+                    'div.flex.min-w-0.items-center.gap-1[title*="Trial"]',
+                    'div.flex.min-w-0.items-center.gap-1[title*="Free"]',
+                    'div.flex.min-w-0.items-center.gap-1[title*="Pro"]',
+                    'div.flex.min-w-0.items-center.gap-1[title*="Business"]',
+                    // Exact class selectors
+                    "p.flex-shrink-0.text-sm.text-brand-gray-300",
+                    // FALLBACK: Previous selectors
                     'div[title="Pro Trial"] p',
                     'div[title*="Trial"] p',
                     'div[title*="Free"] p',
                     'div[title*="Pro"] p',
                     'div[title*="Business"] p',
-                    // Direct title attribute selectors
                     'div[title="Pro Trial"]',
                     'div[title="Free Plan"]',
                     'div[title="Pro Plan"]',
                     'div[title="Business Plan"]',
-                    // Original selectors
-                    "p.flex-shrink-0.text-sm.text-brand-gray-300",
                     '[class*="text-brand-gray-300"]',
                     'div[title*="Plan"] p',
                     'div[title*="plan"] p',
                     "div.flex.min-w-0.items-center.gap-1 p",
-                    // Specific class combination selectors
-                    'div.flex.min-w-0.items-center.gap-1[title*="Trial"] p',
-                    'div.flex.min-w-0.items-center.gap-1[title*="Free"] p',
-                    'div.flex.min-w-0.items-center.gap-1[title*="Pro"] p',
-                    // Additional selectors for various layouts
+                    // Manual :contains() implementation
                     'p:contains("Trial")',
                     'p:contains("Free")',
                     'p:contains("Pro")',
@@ -373,7 +425,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                     }
                   }
 
-                  return { email, status };
+                  // Fallback logic for username and email
+                  if (!email && username) {
+                    // Use username as fallback for email if email not found
+                    email = username;
+                  }
+
+                  if (!username && email) {
+                    // Use email as fallback for username if username not found
+                    username = email;
+                  }
+
+                  console.log("Extracted account info:", {
+                    username,
+                    email,
+                    status,
+                  });
+
+                  return { username, email, status };
                 };
 
                 return extractInfo();
@@ -397,6 +466,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             request.replace || false
           );
           sendResponse({ success: true, data: importedCount });
+          break;
+
+        case "exportPaymentCards":
+          const exportData = await paymentService.exportCards();
+          sendResponse({ success: true, data: exportData });
           break;
 
         case "getPaymentCards":
