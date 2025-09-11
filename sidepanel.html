@@ -1249,10 +1249,22 @@
       style="display: none"
     />
 
+    <!-- Core Architecture Services -->
+    <script src="services/error-handler.js"></script>
+    <script src="services/namespace-manager.js"></script>
+
+    <!-- Core Performance Services -->
+    <script src="services/lazy-loader.js"></script>
+    <script src="services/cache-service.js"></script>
+    <script src="services/dom-optimizer.js"></script>
+
+    <!-- Critical Services Only -->
     <script src="services/payment.js"></script>
-    <script src="services/account-deletion.js"></script>
-    <script src="modules/bypass/bypass-settings.js"></script>
-    <script src="modules/bypass/bypass-handler.js"></script>
     <script src="sidepanel.js"></script>
+
+    <!-- Performance Integration -->
+    <script src="services/performance-integration.js"></script>
+
+    <!-- Heavy modules will be lazy loaded when needed -->
   </body>
 </html>
