@@ -3,31 +3,37 @@
 
 (function () {
   "use strict";
-  
+
   // Listen for messages for console expression evaluation
   chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-    if (request.type === 'evaluateExpression') {
+    if (request.type === "evaluateExpression") {
       try {
         // Create a safe evaluation context
-        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
-        const func = new AsyncFunction('return ' + request.expression);
-        
+        const AsyncFunction = Object.getPrototypeOf(
+          async function () {}
+        ).constructor;
+        const func = new AsyncFunction("return " + request.expression);
+
         // Execute and get result
-        func().then(result => {
-          sendResponse({ success: true, value: result });
-        }).catch(error => {
-          // Try as statement
-          try {
-            const stmtFunc = new AsyncFunction(request.expression);
-            stmtFunc().then(() => {
-              sendResponse({ success: true, value: undefined });
-            }).catch(err => {
-              sendResponse({ success: false, error: err.toString() });
-            });
-          } catch (e) {
-            sendResponse({ success: false, error: error.toString() });
-          }
-        });
+        func()
+          .then((result) => {
+            sendResponse({ success: true, value: result });
+          })
+          .catch((error) => {
+            // Try as statement
+            try {
+              const stmtFunc = new AsyncFunction(request.expression);
+              stmtFunc()
+                .then(() => {
+                  sendResponse({ success: true, value: undefined });
+                })
+                .catch((err) => {
+                  sendResponse({ success: false, error: err.toString() });
+                });
+            } catch (e) {
+              sendResponse({ success: false, error: error.toString() });
+            }
+          });
       } catch (error) {
         // Fallback to eval for simple expressions
         try {
@@ -168,7 +174,7 @@
             status = "free";
             break;
           } else if (text.includes("pro")) {
-            status = "pro";
+            status = "pro plan";
             break;
           } else if (text.includes("business")) {
             status = "business";
@@ -190,7 +196,7 @@
           status = "free";
           break;
         } else if (title.includes("pro")) {
-          status = "pro";
+          status = "pro plan";
           break;
         } else if (title.includes("business")) {
           status = "business";

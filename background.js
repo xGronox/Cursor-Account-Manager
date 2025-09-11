@@ -446,7 +446,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                           titleLower.includes("pro plan") ||
                           titleLower === "pro plan"
                         ) {
-                          status = "pro";
+                          status = "pro plan";
                           break;
                         } else if (titleLower.includes("business")) {
                           status = "business";
@@ -464,7 +464,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                           status = "pro trial";
                           break;
                         } else if (text.includes("pro")) {
-                          status = "pro";
+                          status = "pro plan";
                           break;
                         } else if (text.includes("business")) {
                           status = "business";
@@ -492,7 +492,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                         status = "pro trial";
                         break;
                       } else if (title.includes("pro")) {
-                        status = "pro";
+                        status = "pro plan";
                         break;
                       } else if (title.includes("business")) {
                         status = "business";
@@ -524,7 +524,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                           status = "pro trial";
                           break;
                         } else if (text.includes("pro")) {
-                          status = "pro";
+                          status = "pro plan";
                           break;
                         } else if (text.includes("business")) {
                           status = "business";

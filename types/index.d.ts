@@ -14,7 +14,7 @@ interface Account {
   id: string;
   email: string;
   cookies: Cookie[];
-  status: "free" | "pro" | "business";
+  status: "free" | "pro trial" | "pro plan" | "business" | "empty" | "";
   createdAt: Date;
   lastUsed?: Date;
   isActive?: boolean;

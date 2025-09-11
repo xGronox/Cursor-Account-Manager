@@ -42,11 +42,14 @@ function setupLazyTabLoading() {
       tab.addEventListener(
         "click",
         async () => {
-          if (!window.lazyLoader.isLoaded(`${feature}-service`)) {
+          // Safe access to lazyLoader service
+          const lazyLoader =
+            window.lazyLoader || window.CAM?.services?.lazyLoader;
+          if (lazyLoader && !lazyLoader.isLoaded(`${feature}-service`)) {
             showLoadingIndicator(tabId);
 
             try {
-              await window.lazyLoader.loadFeature(feature);
+              await lazyLoader.loadFeature(feature);
               hideLoadingIndicator(tabId);
             } catch (error) {
               console.error(`Failed to load ${feature}:`, error);
@@ -68,7 +71,16 @@ function setupCachedDataFetching() {
 
   // Cache account list
   window.getCachedAccounts = async () => {
-    return await window.cacheService.getOrFetch(
+    const cacheService =
+      window.cacheService || window.CAM?.services?.cacheService;
+    if (!cacheService) {
+      console.warn(
+        "CacheService not available, falling back to direct storage"
+      );
+      return await chrome.storage.local.get(["accounts"]);
+    }
+
+    return await cacheService.getOrFetch(
       "accounts:list",
       async () => {
         // Original account fetching logic
@@ -80,7 +92,16 @@ function setupCachedDataFetching() {
 
   // Cache payment cards
   window.getCachedPaymentCards = async () => {
-    return await window.cacheService.getOrFetch(
+    const cacheService =
+      window.cacheService || window.CAM?.services?.cacheService;
+    if (!cacheService) {
+      console.warn(
+        "CacheService not available, falling back to direct storage"
+      );
+      return await chrome.storage.local.get(["paymentCards"]);
+    }
+
+    return await cacheService.getOrFetch(
       "payment:cards",
       async () => {
         // Original payment cards fetching logic
@@ -92,7 +113,27 @@ function setupCachedDataFetching() {
 
   // Cache user profile
   window.getCachedUserProfile = async () => {
-    return await window.cacheService.getOrFetch(
+    const cacheService =
+      window.cacheService || window.CAM?.services?.cacheService;
+    if (!cacheService) {
+      console.warn(
+        "CacheService not available, falling back to direct message"
+      );
+      const tabs = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      const activeTab = tabs[0];
+
+      if (activeTab?.url?.includes("cursor.com")) {
+        return await chrome.tabs.sendMessage(activeTab.id, {
+          action: "getCurrentUser",
+        });
+      }
+      return null;
+    }
+
+    return await cacheService.getOrFetch(
       "user:profile",
       async () => {
         // Original profile fetching logic
@@ -120,13 +161,36 @@ function setupCachedDataFetching() {
 function setupOptimizedDOMUpdates() {
   // Override list update functions
   window.updateAccountsList = (accounts) => {
-    window.domOptimizer.updateList(
-      "accountsList",
-      accounts,
-      (account, index) => {
-        const li = document.createElement("li");
-        li.className = "account-item";
-        li.innerHTML = `
+    const domOptimizer =
+      window.domOptimizer || window.CAM?.services?.domOptimizer;
+    if (!domOptimizer) {
+      console.warn("DOMOptimizer not available, using direct DOM manipulation");
+      const container = document.getElementById("accountsList");
+      if (container) {
+        container.innerHTML = accounts
+          .map(
+            (account) => `
+          <li class="account-item">
+            <div class="account-info">
+              <span class="account-email">${account.email}</span>
+              <span class="account-status">${account.status}</span>
+            </div>
+            <div class="account-actions">
+              <button class="btn btn-sm" onclick="switchAccount('${account.email}')">Switch</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteAccount('${account.email}')">Delete</button>
+            </div>
+          </li>
+        `
+          )
+          .join("");
+      }
+      return;
+    }
+
+    domOptimizer.updateList("accountsList", accounts, (account, index) => {
+      const li = document.createElement("li");
+      li.className = "account-item";
+      li.innerHTML = `
           <div class="account-info">
             <span class="account-email">${account.email}</span>
             <span class="account-status">${account.status}</span>
@@ -136,13 +200,44 @@ function setupOptimizedDOMUpdates() {
             <button class="btn btn-sm btn-danger" onclick="deleteAccount('${account.email}')">Delete</button>
           </div>
         `;
-        return li;
-      }
-    );
+      return li;
+    });
   };
 
   window.updatePaymentCardsList = (cards) => {
-    window.domOptimizer.updateList("paymentCardsList", cards, (card, index) => {
+    const domOptimizer =
+      window.domOptimizer || window.CAM?.services?.domOptimizer;
+    if (!domOptimizer) {
+      console.warn("DOMOptimizer not available, using direct DOM manipulation");
+      const container = document.getElementById("paymentCardsList");
+      if (container) {
+        container.innerHTML = cards
+          .map(
+            (card) => `
+          <li class="card-item">
+            <div class="card-info">
+              <span class="card-number">**** **** **** ${card.number.slice(
+                -4
+              )}</span>
+              <span class="card-expiry">${card.expiry}</span>
+            </div>
+            <div class="card-actions">
+              <button class="btn btn-sm" onclick="useCard('${
+                card.id
+              }')">Use</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteCard('${
+                card.id
+              }')">Delete</button>
+            </div>
+          </li>
+        `
+          )
+          .join("");
+      }
+      return;
+    }
+
+    domOptimizer.updateList("paymentCardsList", cards, (card, index) => {
       const li = document.createElement("li");
       li.className = "card-item";
       li.innerHTML = `
@@ -172,10 +267,23 @@ function setupOptimizedDOMUpdates() {
 function setupPerformanceMonitoring() {
   // Monitor performance every 30 seconds
   setInterval(() => {
+    // Safe access to services
+    const lazyLoader = window.lazyLoader || window.CAM?.services?.lazyLoader;
+    const cacheService =
+      window.cacheService || window.CAM?.services?.cacheService;
+    const domOptimizer =
+      window.domOptimizer || window.CAM?.services?.domOptimizer;
+
     const stats = {
-      lazyLoader: window.lazyLoader.getStats(),
-      cache: window.cacheService.getStats(),
-      dom: window.domOptimizer.getStats(),
+      lazyLoader: lazyLoader?.getStats?.() || {
+        error: "LazyLoader not available",
+      },
+      cache: cacheService?.getStats?.() || {
+        error: "CacheService not available",
+      },
+      dom: domOptimizer?.getStats?.() || {
+        error: "DOMOptimizer not available",
+      },
     };
 
     console.log("📊 Performance Stats:", stats);
@@ -186,12 +294,29 @@ function setupPerformanceMonitoring() {
 
   // Expose performance controls for debug panel
   window.performanceControls = {
-    clearCache: () => window.cacheService.clear(),
+    clearCache: () => {
+      const cacheService =
+        window.cacheService || window.CAM?.services?.cacheService;
+      if (cacheService?.clear) {
+        cacheService.clear();
+      } else {
+        console.warn("CacheService.clear not available");
+      }
+    },
     getStats: () => window.performanceStats,
     preloadAll: async () => {
-      await window.lazyLoader.loadFeature("generator");
-      await window.lazyLoader.loadFeature("console");
-      await window.lazyLoader.loadFeature("account-deletion");
+      const lazyLoader = window.lazyLoader || window.CAM?.services?.lazyLoader;
+      if (lazyLoader?.loadFeature) {
+        try {
+          await lazyLoader.loadFeature("generator");
+          await lazyLoader.loadFeature("console");
+          await lazyLoader.loadFeature("account-deletion");
+        } catch (error) {
+          console.error("Error preloading features:", error);
+        }
+      } else {
+        console.warn("LazyLoader.loadFeature not available");
+      }
     },
   };
 }
@@ -238,17 +363,45 @@ function showErrorIndicator(tabId, feature) {
 window.performanceUtils = {
   // Preload a specific feature
   preload: async (feature) => {
-    return await window.lazyLoader.loadFeature(feature);
+    const lazyLoader = window.lazyLoader || window.CAM?.services?.lazyLoader;
+    if (lazyLoader?.loadFeature) {
+      return await lazyLoader.loadFeature(feature);
+    } else {
+      console.warn("LazyLoader.loadFeature not available for preload");
+      return false;
+    }
   },
 
   // Invalidate cache for specific pattern
   invalidateCache: (pattern) => {
-    window.cacheService.invalidatePattern(pattern);
+    const cacheService =
+      window.cacheService || window.CAM?.services?.cacheService;
+    if (cacheService?.invalidatePattern) {
+      cacheService.invalidatePattern(pattern);
+    } else {
+      console.warn("CacheService.invalidatePattern not available");
+    }
   },
 
   // Batch DOM updates
   batchUpdate: (elementId, updateFn, priority = 5) => {
-    window.domOptimizer.scheduleUpdate(elementId, updateFn, priority);
+    const domOptimizer =
+      window.domOptimizer || window.CAM?.services?.domOptimizer;
+    if (domOptimizer?.scheduleUpdate) {
+      domOptimizer.scheduleUpdate(elementId, updateFn, priority);
+    } else {
+      console.warn(
+        "DOMOptimizer.scheduleUpdate not available, using direct update"
+      );
+      const element = document.getElementById(elementId);
+      if (element && updateFn) {
+        try {
+          updateFn(element);
+        } catch (error) {
+          console.error("Direct DOM update failed:", error);
+        }
+      }
+    }
   },
 
   // Get current performance metrics
@@ -267,9 +420,32 @@ window.performanceUtils = {
   },
 };
 
+// Safe initialization with retry logic
+function safeInitialize() {
+  // Check if essential services are available
+  const hasEssentialServices =
+    (window.lazyLoader || window.CAM?.services?.lazyLoader) &&
+    (window.cacheService || window.CAM?.services?.cacheService) &&
+    (window.domOptimizer || window.CAM?.services?.domOptimizer);
+
+  if (hasEssentialServices) {
+    console.log(
+      "🚀 All essential services available, initializing performance features"
+    );
+    initializePerformanceFeatures();
+  } else {
+    console.log("⏳ Waiting for essential services to load...");
+    // Retry in 500ms
+    setTimeout(safeInitialize, 500);
+  }
+}
+
 // Auto-initialize performance features when script loads
 if (document.readyState === "loading") {
-  document.addEventListener("DOMContentLoaded", initializePerformanceFeatures);
+  document.addEventListener("DOMContentLoaded", () => {
+    // Give services time to load
+    setTimeout(safeInitialize, 100);
+  });
 } else {
-  initializePerformanceFeatures();
+  setTimeout(safeInitialize, 100);
 }
