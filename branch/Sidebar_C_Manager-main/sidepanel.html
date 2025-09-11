@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cursor Account Manager - Sidebar</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <div id="sidebar-app">
+      <!-- Header -->
+      <div class="sidebar-header">
+        <div class="title">
+          <span class="icon">👤</span>
+          <h2>Cursor Accounts</h2>
+        </div>
+        <div class="header-actions">
+          <button id="darkModeToggle" class="icon-btn" title="Toggle Dark Mode">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95M17.33,17.97C14.5,17.81 11.7,16.64 9.53,14.5C7.36,12.31 6.2,9.5 6.04,6.68C3.23,9.82 3.34,14.4 6.35,17.41C9.37,20.43 14,20.54 17.33,17.97Z"/>
+            </svg>
+          </button>
+          <button id="refreshBtn" class="icon-btn" title="Refresh">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Debug Panel (Hidden by default) -->
+      <div class="debug-section">
+        <button
+          id="debugToggle"
+          class="btn btn-link btn-sm debug-toggle"
+          style="display: none"
+          title="Toggle Debug Panel (Ctrl+Shift+D)"
+        >
+          🐛 Debug
+        </button>
+        <div id="debugPanel" class="debug-panel" style="display: none">
+          <h3>Debug Tools</h3>
+          <div class="debug-actions">
+            <button id="showStoredDataBtn" class="btn btn-secondary btn-sm">
+              📄 Show Data
+            </button>
+            <button id="clearAllDataBtn" class="btn btn-danger btn-sm">
+              🗑️ Clear All
+            </button>
+            <button
+              id="consolidateDuplicatesBtn"
+              class="btn btn-secondary btn-sm"
+            >
+              🔧 Fix Duplicates
+            </button>
+          </div>
+          <div id="debugOutput" class="debug-output"></div>
+        </div>
+      </div>
+
+      <!-- Current Account Section -->
+      <div class="current-account-section">
+        <div class="current-label">Active Account</div>
+        <div class="current-account" id="currentAccount">
+          <span class="account-icon">🔴</span>
+          <div class="account-details">
+            <span class="account-name">Not logged in</span>
+            <span class="account-status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Navigation -->
+      <div class="tab-navigation">
+        <button id="accountsTab" class="tab-btn active">👤 Accounts</button>
+        <button id="generatorTab" class="tab-btn">💳 Payments Tools</button>
+      </div>
+
+      <!-- Accounts Tab Content -->
+      <div id="accountsContent" class="tab-content">
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+          <button id="addAccountBtn" class="btn btn-primary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M15,14C12.33,14 7,15.33 7,18V20H23V18C23,15.33 17.67,14 15,14M6,10V7H4V10H1V12H4V15H6V12H9V10M15,12A4,4 0 0,0 19,8A4,4 0 0,0 15,4A4,4 0 0,0 11,8A4,4 0 0,0 15,12Z"/>
+            </svg>
+            Add Account
+          </button>
+          <button id="activateProTrialBtn" class="btn btn-success">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M7,2V13H10V22L17,10H13L17,2H7Z"/>
+            </svg>
+            Pro Trial
+          </button>
+          <button id="toggleAdvancedBtn" class="btn btn-text">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.5,5.32 14.87,5.07L14.5,2.42C14.46,2.18 14.25,2 14,2H10C9.75,2 9.54,2.18 9.5,2.42L9.13,5.07C8.5,5.32 7.96,5.66 7.44,6.05L4.95,5.05C4.73,4.96 4.46,5.05 4.34,5.27L2.34,8.73C2.22,8.95 2.27,9.22 2.46,9.37L4.57,11C4.53,11.34 4.5,11.67 4.5,12C4.5,12.33 4.53,12.65 4.57,12.97L2.46,14.63C2.27,14.78 2.22,15.05 2.34,15.27L4.34,18.73C4.46,18.95 4.73,19.03 4.95,18.95L7.44,17.94C7.96,18.34 8.5,18.68 9.13,18.93L9.5,21.58C9.54,21.82 9.75,22 10,22H14C14.25,22 14.46,21.82 14.5,21.58L14.87,18.93C15.5,18.68 16.04,18.34 16.56,17.94L19.05,18.95C19.27,19.03 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/>
+            </svg>
+            Advanced
+          </button>
+        </div>
+
+        <!-- Advanced Actions (collapsible) -->
+        <div class="advanced-actions">
+          <div id="advancedPanel" class="advanced-panel" style="display: none">
+            <!-- Import/Export Tools -->
+            <div class="advanced-group">
+              <h4 class="group-title">Import & Export</h4>
+              <div class="group-buttons">
+                <button id="exportCurrentBtn" class="btn btn-outlined btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/>
+                  </svg>
+                  Export Current
+                </button>
+                <button id="importFromDownloadsBtn" class="btn btn-outlined btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M5,20H19V18H5M19,9H15V3H9V9H5L12,16L19,9Z"/>
+                  </svg>
+                  Import Files
+                </button>
+                <button id="importFolderBtn" class="btn btn-outlined btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M10,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V8C22,6.89 21.11,6 20,6H12L10,4Z"/>
+                  </svg>
+                  Import Folder
+                </button>
+              </div>
+            </div>
+
+            <!-- Maintenance Tools -->
+            <div class="advanced-group">
+              <h4 class="group-title">Maintenance</h4>
+              <div class="group-buttons">
+                <button id="consolidateDuplicatesBtn" class="btn btn-outlined btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M21,9L19,10.5L15,6.5L16.5,5L19,7.5L22.5,4L24,5.5L21,9M19,19H5V5H14V3H5A2,2 0 0,0 3,5V19A2,2 0 0,0 5,21H19A2,2 0 0,0 21,19V12H19V19M8,18V16H10V14H8V12H10V14H12V12H14V14H12V16H14V18H12V16H10V18H8Z"/>
+                  </svg>
+                  Fix Duplicates
+                </button>
+                <button id="cleanupAccountInfoBtn" class="btn btn-outlined btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M19,4H15.5L14.5,3H9.5L8.5,4H5V6H19M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19Z"/>
+                  </svg>
+                  Fix Info
+                </button>
+                <button id="clearAllDataBtn" class="btn btn-danger btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M6,19A2,2 0 0,0 8,21H16A2,2 0 0,0 18,19V7H6V19M8,9H16V19H8V9M15.5,4L14.5,3H9.5L8.5,4H5V6H19V4H15.5Z"/>
+                  </svg>
+                  Clear All Data
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Delete Tools -->
+            <div class="advanced-group">
+              <h4 class="group-title">Quick Delete</h4>
+              <div class="group-buttons">
+                <button id="deleteFreeAccountBtn" class="btn btn-danger btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12,2A7,7 0 0,1 19,9C19,11.38 17.81,13.47 16,14.74V17A1,1 0 0,1 15,18H9A1,1 0 0,1 8,17V14.74C6.19,13.47 5,11.38 5,9A7,7 0 0,1 12,2M9,21V20H15V21A1,1 0 0,1 14,22H10A1,1 0 0,1 9,21M12,4A5,5 0 0,0 7,9C7,11 8.57,12.64 10.57,12.92L11,13H13L13.43,12.92C15.43,12.64 17,11 17,9A5,5 0 0,0 12,4Z"/>
+                  </svg>
+                  Delete Free Account
+                </button>
+                <button id="deleteProTrialAccountBtn" class="btn btn-danger btn-sm">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M7,2V13H10V22L17,10H13L17,2H7Z"/>
+                  </svg>
+                  Delete Pro Trial Account
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Accounts List -->
+        <div class="accounts-section">
+          <div class="section-header">
+            <h3>Accounts</h3>
+            <span id="accountsCount" class="count">(0)</span>
+          </div>
+
+          <!-- Account Filters -->
+          <div class="account-filters">
+            <div class="filter-row">
+              <input
+                type="text"
+                id="accountFilterInput"
+                placeholder="Filter accounts by name, email..."
+                class="filter-input"
+              />
+              <select id="accountStatusFilter" class="filter-select">
+                <option value="">All Status</option>
+                <option value="free">Free</option>
+                <option value="pro trial">Pro Trial</option>
+                <option value="pro plan">Pro Plan</option>
+                <option value="business">Business</option>
+                <option value="empty">Empty Status</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="accountsList" class="sidebar-accounts-list scrollable">
+            <!-- Accounts will be populated here -->
+          </div>
+
+          <div id="noAccounts" class="empty-state" style="display: none">
+            <div class="empty-icon">📁</div>
+            <p>No accounts</p>
+            <p class="hint">Click ➕ to add</p>
+          </div>
+        </div>
+      </div>
+
+
+      <!-- Generator Tab Content -->
+      <div id="generatorContent" class="tab-content" style="display: none">
+        
+        <!-- Payment Generator Panel -->
+        <div class="generator-panel">
+          <div class="panel-header">
+            <h3>💳 Payment Data Generator</h3>
+          </div>
+          
+          <div class="panel-content">
+            <div class="settings-group">
+              <label for="binInput">BIN:</label>
+              <div class="bin-input-container">
+                <input type="text" id="binInput" placeholder="Empty = random cards, BIN = specific cards" maxlength="16" class="form-input" autocomplete="off" />
+                <div id="binHistoryDropdown" class="bin-history-dropdown">
+                  <div class="bin-history-empty">No BIN history yet</div>
+                </div>
+              </div>
+              <small class="form-hint">Leave empty for random cards, or enter BIN (0-16 digits), full card number, or partial. Click field to see history.</small>
+            </div>
+            
+            <div class="settings-group">
+              <label for="cardQuantity">Quantity:</label>
+              <select id="cardQuantity" class="form-select">
+                <option value="1">1</option>
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+            
+            <div class="settings-group action-buttons">
+              <button id="generateCardsBtn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.11,4 20,4Z"/>
+                </svg>
+                Generate Payment Data
+              </button>
+            </div>
+            
+            <div class="output-section">
+              <label>Generated Payment Data:</label>
+              <textarea id="cardOutput" readonly class="output-textarea" placeholder="Generated payment data will appear here..."></textarea>
+            </div>
+            
+            <div class="settings-grid">
+              <div class="settings-group">
+                <label>
+                  <input type="checkbox" id="autoFillEnabled" checked> 
+                  Enable automatic form filling
+                </label>
+              </div>
+              
+              <div class="settings-group">
+                <label>
+                  <input type="checkbox" id="autoSubmitEnabled"> 
+                  Auto-submit forms after filling (be careful!)
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Address Generator Panel -->
+        <div class="generator-panel">
+          <div class="panel-header">
+            <h3>🏠 Address Generator Settings</h3>
+          </div>
+          
+          <div class="panel-content">
+            <div class="settings-group">
+              <label for="countrySelect">Default Country:</label>
+              <select id="countrySelect" class="form-select">
+                <option value="US">United States</option>
+                <option value="CA">Canada</option>
+                <option value="GB">United Kingdom</option>
+                <option value="DE">Germany</option>
+                <option value="FR">France</option>
+                <option value="IT">Italy</option>
+                <option value="ES">Spain</option>
+                <option value="NL">Netherlands</option>
+                <option value="PL">Poland</option>
+                <option value="AU">Australia</option>
+              </select>
+            </div>
+            
+            <div class="settings-group action-buttons">
+              <button id="generateAddressBtn" class="btn btn-primary">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z"/>
+                </svg>
+                Generate Address & Name
+              </button>
+            </div>
+            
+            <div class="output-section">
+              <label>Generated Address & Name:</label>
+              <textarea id="personalOutput" readonly class="output-textarea" placeholder="Generated addresses and names will appear here..."></textarea>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+
+      <!-- Loading Overlay -->
+      <div id="loadingOverlay" class="loading-overlay" style="display: none">
+        <div class="spinner"></div>
+        <p>Loading...</p>
+      </div>
+
+      <!-- Notification -->
+      <div id="notification" class="notification" style="display: none">
+        <span id="notificationText"></span>
+      </div>
+    </div>
+
+    <!-- Account Item Template -->
+    <template id="sidebarAccountTemplate">
+      <div class="sidebar-account-item" data-account="">
+        <div class="account-info">
+          <div class="account-avatar">
+            <span class="account-icon">👤</span>
+            <div class="active-indicator">✓</div>
+          </div>
+          <div class="account-details">
+            <div class="account-email"></div>
+            <div class="account-meta">
+              <span class="account-status"></span>
+            </div>
+          </div>
+        </div>
+        <div class="account-actions">
+          <button class="reveal-btn" title="Show file in folder">📁</button>
+          <button class="delete-btn" title="Delete account">🗑️</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Card Item Template -->
+    <template id="sidebarCardTemplate">
+      <div class="card-item" data-card-id="">
+        <div class="card-checkbox">
+          <input type="checkbox" class="card-select" />
+        </div>
+        <div class="card-info">
+          <div class="card-icon">
+            <span class="card-type-icon">💳</span>
+          </div>
+          <div class="card-details">
+            <div class="card-number"></div>
+            <div class="card-meta">
+              <span class="card-expiry"></span>
+              <span class="card-type"></span>
+            </div>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button class="fill-btn" title="Auto-fill this card">✨</button>
+          <button class="remove-card-btn" title="Remove card">🗑️</button>
+        </div>
+      </div>
+    </template>
+
+    <!-- Add Account Modal -->
+    <div id="addAccountModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Add Account</h3>
+          <button class="modal-close" id="closeModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="add-account-options">
+            <div class="option-group">
+              <h4>🍪 Automatic (Recommended)</h4>
+              <p>Automatically capture cookies from the current page:</p>
+              <button id="captureCurrentPageBtn" class="btn btn-primary btn-full">
+                📄 Capture from Current Page
+              </button>
+              <div id="captureInfo" class="capture-info" style="display: none;"></div>
+            </div>
+            
+            <div class="option-divider">
+              <span>or</span>
+            </div>
+            
+            <div class="option-group">
+              <h4>📝 Manual Input</h4>
+              <p>Paste your Cursor account cookies JSON here:</p>
+              <textarea
+                id="cookiesInput"
+                rows="6"
+                placeholder='[{"name": "SessionToken", "value": "...", ...}]'
+              ></textarea>
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="accountNameInput">Account Name (optional):</label>
+            <input
+              type="text"
+              id="accountNameInput"
+              placeholder="Auto-generated if empty"
+            />
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="confirmAddBtn" class="btn btn-primary">Add Account</button>
+          <button id="cancelAddBtn" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Cards Modal -->
+    <div id="importCardsModal" class="modal" style="display: none">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>Import Payment Cards</h3>
+          <button class="modal-close" id="closeCardsModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <p>Paste your card data here (format: number|MM/YY|CVC):</p>
+          <textarea
+            id="cardsInput"
+            rows="6"
+            placeholder="5598880392588168|06/32|004
+5598880392572030|11/31|157
+..."
+          ></textarea>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="replaceCardsCheck" />
+              Replace existing cards (otherwise merge)
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="confirmImportCardsBtn" class="btn btn-primary">
+            Import Cards
+          </button>
+          <button id="cancelImportCardsBtn" class="btn btn-secondary">
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hidden File Inputs -->
+    <input
+      type="file"
+      id="downloadsFileInput"
+      multiple
+      accept=".json"
+      style="display: none"
+    />
+    <input
+      type="file"
+      id="folderInput"
+      webkitdirectory
+      multiple
+      style="display: none"
+    />
+    <!-- Additional file input for multiple folder selection -->
+    <input
+      type="file"
+      id="multipleFoldersInput"
+      webkitdirectory
+      multiple
+      style="display: none"
+    />
+    <input
+      id="cardsFileInput"
+      type="file"
+      accept=".md,.txt,.json"
+      multiple
+      style="display: none"
+    />
+
+    <script src="services/payment.js"></script>
+    <script src="services/account-deletion.js"></script>
+    <script src="sidepanel.js"></script>
+  </body>
+</html>
