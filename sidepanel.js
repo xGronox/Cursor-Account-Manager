@@ -25,9 +25,24 @@ class CursorAccountSidebar {
 
     // Setup event listeners
     this.setupEventListeners();
+    
+    // Setup message listener for bypass results
+    this.setupMessageListener();
 
     // Update UI
     this.updateUI();
+  }
+  
+  setupMessageListener() {
+    // Listen for messages from background script
+    chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+      if (request.type === 'displayBypassJSON' && request.data) {
+        console.log('Received bypass JSON results to display');
+        this.displayBypassJSON(request.data);
+        sendResponse({ success: true });
+      }
+      return false;
+    });
   }
 
   setupEventListeners() {
@@ -39,6 +54,14 @@ class CursorAccountSidebar {
     document.getElementById("paymentsTab").addEventListener("click", () => {
       this.switchTab("payments");
     });
+
+    // NEW: Bypass tab navigation
+    const bypassTab = document.getElementById("bypassTab");
+    if (bypassTab) {
+      bypassTab.addEventListener("click", () => {
+        this.switchTab("bypass");
+      });
+    }
 
     // Add account button
     document.getElementById("addAccountBtn").addEventListener("click", () => {
@@ -120,6 +143,9 @@ class CursorAccountSidebar {
     document.getElementById("clearCardsBtn").addEventListener("click", () => {
       this.clearAllCards();
     });
+
+    // NEW: Bypass Testing Event Listeners
+    this.setupBypassEventListeners();
 
     // Card filter and selection functionality
     const cardFilterInput = document.getElementById("cardFilterInput");
@@ -1133,6 +1159,8 @@ Choose NO if you want to keep the backup file.`
     // Load appropriate data
     if (tabName === "payments") {
       this.loadPaymentCards();
+    } else if (tabName === "bypass") {
+      this.initializeBypassTab();
     }
   }
 
@@ -1975,10 +2003,792 @@ Choose NO if you want to keep the backup file.`
     setTimeout(checkStatus, 2000); // Start checking after 2 seconds
   }
 
+  // ============= BYPASS TESTING FUNCTIONALITY =============
+  
+  setupBypassEventListeners() {
+    // Detect URL button
+    const detectUrlBtn = document.getElementById("bypassDetectUrl");
+    if (detectUrlBtn) {
+      detectUrlBtn.addEventListener("click", () => this.detectCurrentUrl());
+    }
+
+    // Select all techniques
+    const selectAllBtn = document.getElementById("bypassSelectAll");
+    if (selectAllBtn) {
+      selectAllBtn.addEventListener("click", () => this.selectAllTechniques());
+    }
+
+    // Technique checkboxes
+    document.querySelectorAll('.technique-item input[type="checkbox"]').forEach(checkbox => {
+      checkbox.addEventListener("change", () => this.updateTestCount());
+    });
+
+    // Start testing button
+    const startBtn = document.getElementById("startBypassTest");
+    if (startBtn) {
+      startBtn.addEventListener("click", () => this.startBypassTesting());
+    }
+
+    // Stop testing button
+    const stopBtn = document.getElementById("stopBypassTest");
+    if (stopBtn) {
+      stopBtn.addEventListener("click", () => this.stopBypassTesting());
+    }
+
+    // Export results button
+    const exportBtn = document.getElementById("exportBypassResults");
+    if (exportBtn) {
+      exportBtn.addEventListener("click", () => this.exportBypassResults());
+    }
+    
+    // View results button
+    const viewResultsBtn = document.getElementById("viewBypassResults");
+    if (viewResultsBtn) {
+      viewResultsBtn.addEventListener("click", () => this.viewBypassResults());
+    }
+    
+    // Open console button
+    const consoleBtn = document.getElementById("openBypassConsole");
+    if (consoleBtn) {
+      consoleBtn.addEventListener("click", () => this.openBypassConsole());
+    }
+  }
+
+  initializeBypassTab() {
+    // Reset UI when switching to bypass tab
+    this.resetBypassUI();
+    this.updateTestCount();
+  }
+
+  async detectCurrentUrl() {
+    try {
+      // Get active tab
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      
+      if (tab && tab.url) {
+        // Check if it's a Cursor API endpoint
+        if (tab.url.includes('cursor.com') || tab.url.includes('cursor.sh')) {
+          document.getElementById("bypassTargetUrl").value = tab.url;
+          this.showNotification("URL detected from current tab", "success");
+        } else {
+          // If not on cursor.com, try to use a default endpoint
+          const defaultEndpoint = "https://cursor.com/api/dashboard/delete-account";
+          document.getElementById("bypassTargetUrl").value = defaultEndpoint;
+          this.showNotification("Using default Cursor API endpoint", "info");
+          
+          // Only try to send message if we're on a regular http/https page
+          if (tab.url.startsWith('http://') || tab.url.startsWith('https://')) {
+            try {
+              const response = await chrome.tabs.sendMessage(tab.id, {
+                type: "detectApiEndpoints"
+              });
+              
+              if (response && response.endpoints && response.endpoints.length > 0) {
+                document.getElementById("bypassTargetUrl").value = response.endpoints[0];
+                this.showNotification(`Found ${response.endpoints.length} API endpoints`, "success");
+              }
+            } catch (msgError) {
+              // Ignore message error, use default endpoint
+              console.log("Could not connect to tab, using default endpoint");
+            }
+          }
+        }
+      } else {
+        // Use default endpoint if no tab available
+        const defaultEndpoint = "https://cursor.com/api/dashboard/delete-account";
+        document.getElementById("bypassTargetUrl").value = defaultEndpoint;
+        this.showNotification("Using default Cursor API endpoint", "info");
+      }
+    } catch (error) {
+      console.error("Error detecting URL:", error);
+      // Use default endpoint on error
+      const defaultEndpoint = "https://cursor.com/api/dashboard/delete-account";
+      document.getElementById("bypassTargetUrl").value = defaultEndpoint;
+      this.showNotification("Using default Cursor API endpoint", "info");
+    }
+  }
+
+  selectAllTechniques() {
+    const checkboxes = document.querySelectorAll('.technique-item input[type="checkbox"]');
+    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+    
+    checkboxes.forEach(checkbox => {
+      checkbox.checked = !allChecked;
+    });
+    
+    this.updateTestCount();
+  }
+
+  updateTestCount() {
+    const checkboxes = document.querySelectorAll('.technique-item input[type="checkbox"]:checked');
+    const techniques = Array.from(checkboxes).map(cb => cb.dataset.technique);
+    
+    // Calculate total tests based on selected techniques
+    const testCounts = {
+      parameter: 15,
+      header: 15,
+      method: 20,
+      content: 9,
+      auth: 6,
+      storage: 20,
+      frontend: 5,
+      race: 10,
+      encoding: 9,
+      endpoint: 7
+    };
+    
+    let totalTests = 0;
+    techniques.forEach(tech => {
+      totalTests += testCounts[tech] || 0;
+    });
+    
+    const totalTestsEl = document.getElementById("bypassTotalTests");
+    if (totalTestsEl) {
+      totalTestsEl.textContent = `${totalTests} tests selected`;
+    }
+  }
+
+  async startBypassTesting() {
+    const targetUrl = document.getElementById("bypassTargetUrl").value.trim();
+    
+    if (!targetUrl) {
+      this.showNotification("Please enter a target URL", "warning");
+      return;
+    }
+    
+    // Get selected techniques
+    const checkboxes = document.querySelectorAll('.technique-item input[type="checkbox"]:checked');
+    const techniques = Array.from(checkboxes).map(cb => cb.dataset.technique);
+    
+    if (techniques.length === 0) {
+      this.showNotification("Please select at least one technique", "warning");
+      return;
+    }
+    
+    // Update UI
+    document.getElementById("startBypassTest").disabled = true;
+    document.getElementById("stopBypassTest").disabled = false;
+    document.getElementById("bypassProgressSection").style.display = "block";
+    document.getElementById("bypassResultsSection").style.display = "none";
+    
+    // Reset progress
+    this.bypassTestResults = [];
+    this.bypassTestProgress = 0;
+    this.bypassTestTotal = 0;
+    this.bypassTestRunning = true;
+    
+    try {
+      // Send message to background script to start testing
+      const response = await chrome.runtime.sendMessage({
+        type: "startBypassTest",
+        targetUrl: targetUrl,
+        techniques: techniques
+      });
+      
+      if (response.success) {
+        this.showNotification("Bypass testing started", "info");
+        this.monitorBypassProgress();
+      } else {
+        throw new Error(response.error || "Failed to start testing");
+      }
+    } catch (error) {
+      console.error("Error starting bypass test:", error);
+      this.showNotification("Failed to start bypass testing", "error");
+      this.resetBypassUI();
+    }
+  }
+
+  async monitorBypassProgress() {
+    if (!this.bypassTestRunning) return;
+    
+    try {
+      const response = await chrome.runtime.sendMessage({
+        type: "getBypassProgress"
+      });
+      
+      if (response.success) {
+        const { progress, total, current, results } = response.data;
+        
+        // Update progress bar
+        const progressPercent = (progress / total) * 100;
+        document.getElementById("bypassProgressFill").style.width = `${progressPercent}%`;
+        document.getElementById("bypassProgressText").textContent = 
+          `Testing ${current || "..."}... (${progress}/${total})`;
+        
+        // Store results
+        if (results) {
+          this.bypassTestResults = results;
+        }
+        
+        // Check if completed
+        if (progress >= total) {
+          this.completeBypassTesting();
+        } else {
+          // Continue monitoring
+          setTimeout(() => this.monitorBypassProgress(), 500);
+        }
+      }
+    } catch (error) {
+      console.error("Error monitoring bypass progress:", error);
+    }
+  }
+
+  completeBypassTesting() {
+    this.bypassTestRunning = false;
+    
+    // Update UI
+    document.getElementById("startBypassTest").disabled = false;
+    document.getElementById("stopBypassTest").disabled = true;
+    document.getElementById("bypassProgressSection").style.display = "none";
+    document.getElementById("bypassResultsSection").style.display = "block";
+    
+    // Display results
+    this.displayBypassResults();
+    
+    this.showNotification("Bypass testing completed!", "success");
+  }
+
+  async stopBypassTesting() {
+    this.bypassTestRunning = false;
+    
+    try {
+      await chrome.runtime.sendMessage({
+        type: "stopBypassTest"
+      });
+      
+      this.showNotification("Bypass testing stopped", "info");
+    } catch (error) {
+      console.error("Error stopping bypass test:", error);
+    }
+    
+    this.resetBypassUI();
+  }
+
+  displayBypassResults() {
+    if (!this.bypassTestResults || this.bypassTestResults.length === 0) {
+      document.getElementById("bypassResultDetails").innerHTML = 
+        '<div class="empty-state">No results to display</div>';
+      return;
+    }
+    
+    // Count results by status
+    let successCount = 0;
+    let partialCount = 0;
+    let failedCount = 0;
+    
+    this.bypassTestResults.forEach(result => {
+      if (result.status === "success") successCount++;
+      else if (result.status === "partial") partialCount++;
+      else failedCount++;
+    });
+    
+    // Update summary
+    document.getElementById("bypassSuccessCount").textContent = successCount;
+    document.getElementById("bypassPartialCount").textContent = partialCount;
+    document.getElementById("bypassFailedCount").textContent = failedCount;
+    
+    // Display detailed results
+    const detailsHtml = this.bypassTestResults
+      .filter(result => result.status !== "failed") // Only show successful/partial
+      .map(result => `
+        <div class="result-item ${result.status}">
+          <div class="result-header">
+            <span class="result-technique">${result.technique}</span>
+            <span class="result-status">${result.status}</span>
+          </div>
+          <div class="result-description">${result.description}</div>
+          ${result.payload ? `<div class="result-payload"><code>${this.escapeHtml(result.payload)}</code></div>` : ''}
+        </div>
+      `).join('');
+    
+    document.getElementById("bypassResultDetails").innerHTML = detailsHtml || 
+      '<div class="empty-state">No successful bypasses found</div>';
+  }
+
+  async exportBypassResults() {
+    if (!this.bypassTestResults || this.bypassTestResults.length === 0) {
+      this.showNotification("No results to export", "warning");
+      return;
+    }
+    
+    try {
+      const targetUrl = document.getElementById("bypassTargetUrl").value;
+      const timestamp = new Date().toISOString();
+      
+      const exportData = {
+        timestamp: timestamp,
+        targetUrl: targetUrl,
+        results: this.bypassTestResults,
+        summary: {
+          total: this.bypassTestResults.length,
+          successful: this.bypassTestResults.filter(r => r.status === "success").length,
+          partial: this.bypassTestResults.filter(r => r.status === "partial").length,
+          failed: this.bypassTestResults.filter(r => r.status === "failed").length
+        }
+      };
+      
+      // Create blob and download
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `bypass-test-results-${Date.now()}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      
+      this.showNotification("Results exported successfully", "success");
+    } catch (error) {
+      console.error("Error exporting results:", error);
+      this.showNotification("Failed to export results", "error");
+    }
+  }
+
+  resetBypassUI() {
+    document.getElementById("startBypassTest").disabled = false;
+    document.getElementById("stopBypassTest").disabled = true;
+    document.getElementById("bypassProgressSection").style.display = "none";
+    document.getElementById("bypassProgressFill").style.width = "0%";
+    document.getElementById("bypassProgressText").textContent = "Initializing...";
+  }
+  
+  // View bypass results
+  viewBypassResults() {
+    const resultsSection = document.getElementById("bypassResultsSection");
+    
+    if (resultsSection.style.display === "none") {
+      // Show results if hidden
+      if (this.bypassTestResults && this.bypassTestResults.length > 0) {
+        resultsSection.style.display = "block";
+        this.displayBypassResults();
+        this.showNotification("Showing test results", "info");
+        
+        // Scroll to results
+        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      } else {
+        this.showNotification("No test results available. Run a test first!", "warning");
+      }
+    } else {
+      // Hide results if visible
+      resultsSection.style.display = "none";
+      this.showNotification("Results hidden", "info");
+    }
+  }
+  
+  // Open bypass console - Using advanced console service
+  async openBypassConsole() {
+    // Load console service if not loaded
+    if (!window.consoleService) {
+      const script = document.createElement('script');
+      script.src = chrome.runtime.getURL('services/console-service.js');
+      document.head.appendChild(script);
+      
+      // Wait for script to load
+      await new Promise(resolve => {
+        script.onload = resolve;
+        setTimeout(resolve, 1000); // Fallback timeout
+      });
+    }
+    
+    // Create or toggle console
+    if (window.consoleService) {
+      const console = window.consoleService.createConsoleUI();
+      
+      if (!console) {
+        // Console was already open and got closed
+        this.showNotification('Console closed', 'info');
+      } else {
+        // Console opened
+        window.consoleService.captureLog('success', ['Advanced console initialized']);
+        window.consoleService.captureLog('info', ['Type :help for available commands']);
+        
+        // Log current context
+        window.consoleService.captureLog('system', [
+          `Context: ${this.currentTab} tab`,
+          `Active account: ${this.activeAccount?.name || 'None'}`,
+          `URL: ${window.location.href}`
+        ]);
+      }
+    } else {
+      // Fallback to simple console if service fails to load
+      this.openSimpleConsole();
+    }
+  }
+  
+  // Fallback simple console
+  openSimpleConsole() {
+    // Create or show console panel
+    let consolePanel = document.getElementById("bypassConsole");
+    
+    if (!consolePanel) {
+      // Create console panel if it doesn't exist
+      consolePanel = document.createElement("div");
+      consolePanel.id = "bypassConsole";
+      consolePanel.style.cssText = `
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 250px;
+        background: #0f172a;
+        border-top: 2px solid #334155;
+        display: flex;
+        flex-direction: column;
+        z-index: 9999;
+      `;
+      
+      consolePanel.innerHTML = `
+        <div style="padding: 10px; background: #1e293b; display: flex; justify-content: space-between; align-items: center;">
+          <h3 style="margin: 0; color: white; font-size: 14px;">🖥️ Bypass Console</h3>
+          <button 
+            onclick="document.getElementById('bypassConsole').remove()" 
+            style="background: #ef4444; color: white; border: none; padding: 4px 12px; border-radius: 4px; cursor: pointer;">
+            Close
+          </button>
+        </div>
+        <div id="bypassConsoleOutput" style="flex: 1; padding: 10px; overflow-y: auto; font-family: 'Courier New', monospace; font-size: 12px; color: #94a3b8;">
+          <div style="color: #10b981;">[Console] Bypass testing console initialized...</div>
+        </div>
+        <div style="padding: 10px; background: #1e293b;">
+          <input 
+            id="bypassConsoleInput" 
+            type="text" 
+            placeholder="Type command... (help for commands)"
+            style="width: 100%; padding: 8px; background: #0f172a; border: 1px solid #334155; color: white; border-radius: 4px;"
+            onkeypress="if(event.key === 'Enter') { window.cursorSidebar.executeBypassCommand(this.value); this.value = ''; }"
+          />
+        </div>
+      `;
+      
+      document.body.appendChild(consolePanel);
+      
+      // Store reference for command execution
+      window.cursorSidebar = this;
+      
+      this.logToConsole("Console opened. Type 'help' for available commands.", "info");
+    } else {
+      // Remove console if it exists
+      consolePanel.remove();
+    }
+  }
+  
+  // Log to bypass console
+  logToConsole(message, type = "log") {
+    const output = document.getElementById("bypassConsoleOutput");
+    if (output) {
+      const colors = {
+        log: "#94a3b8",
+        info: "#3b82f6",
+        success: "#10b981",
+        warning: "#f59e0b",
+        error: "#ef4444"
+      };
+      
+      const timestamp = new Date().toLocaleTimeString();
+      const logEntry = document.createElement("div");
+      logEntry.style.color = colors[type] || colors.log;
+      logEntry.innerHTML = `[${timestamp}] ${message}`;
+      output.appendChild(logEntry);
+      output.scrollTop = output.scrollHeight;
+    }
+  }
+  
+  // Execute bypass console command
+  executeBypassCommand(command) {
+    this.logToConsole(`> ${command}`, "info");
+    
+    const cmd = command.toLowerCase().trim();
+    
+    switch(cmd) {
+      case 'help':
+        this.logToConsole(`
+Available commands:
+  start - Start bypass testing
+  stop - Stop bypass testing
+  clear - Clear console
+  results - Show results summary
+  export - Export results to file
+  techniques - List available techniques
+  status - Show current status
+`, "success");
+        break;
+        
+      case 'start':
+        this.startBypassTesting();
+        break;
+        
+      case 'stop':
+        this.stopBypassTesting();
+        break;
+        
+      case 'clear':
+        const output = document.getElementById("bypassConsoleOutput");
+        if (output) output.innerHTML = '';
+        this.logToConsole("Console cleared", "info");
+        break;
+        
+      case 'results':
+        if (this.bypassTestResults && this.bypassTestResults.length > 0) {
+          const success = this.bypassTestResults.filter(r => r.status === "success").length;
+          const partial = this.bypassTestResults.filter(r => r.status === "partial").length;
+          const failed = this.bypassTestResults.filter(r => r.status === "failed").length;
+          this.logToConsole(`Results: ${success} successful, ${partial} partial, ${failed} failed`, "success");
+        } else {
+          this.logToConsole("No results available", "warning");
+        }
+        break;
+        
+      case 'export':
+        this.exportBypassResults();
+        break;
+        
+      case 'techniques':
+        this.logToConsole(`
+Available techniques:
+  • Parameter Injection (15 tests)
+  • Header Manipulation (15 tests)
+  • Method Override (20 tests)
+  • Content-Type Bypass (9 tests)
+  • Authorization Bypass (6 tests)
+  • Storage Manipulation (20 tests)
+  • Frontend Override (5 tests)
+  • Race Condition (10 tests)
+  • Encoding Bypass (9 tests)
+  • Alternative Endpoints (7 tests)
+`, "success");
+        break;
+        
+      case 'status':
+        const running = this.bypassTestRunning ? "Running" : "Idle";
+        const progress = this.bypassTestProgress || 0;
+        const total = this.bypassTestTotal || 0;
+        this.logToConsole(`Status: ${running}, Progress: ${progress}/${total}`, "info");
+        break;
+        
+      default:
+        this.logToConsole(`Unknown command: ${command}. Type 'help' for available commands.`, "error");
+    }
+  }
+
   escapeHtml(text) {
     const div = document.createElement("div");
     div.textContent = text;
     return div.innerHTML;
+  }
+  
+  // Handle bypass results JSON
+  displayBypassJSON(jsonData) {
+    // Create results display modal
+    const modal = document.createElement('div');
+    modal.id = 'bypassResultsModal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      z-index: 10000;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    `;
+    
+    const jsonString = JSON.stringify(jsonData, null, 2);
+    const successRate = jsonData.summary ? jsonData.summary.success_rate : '0%';
+    
+    modal.innerHTML = `
+      <div style="
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      ">
+        <h3 style="margin: 0; font-size: 18px;">🔍 Bypass Test Results</h3>
+        <button id="closeResultsModal" style="
+          background: rgba(255,255,255,0.2);
+          border: none;
+          color: white;
+          width: 30px;
+          height: 30px;
+          border-radius: 50%;
+          cursor: pointer;
+          font-size: 18px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">×</button>
+      </div>
+      
+      <div style="padding: 20px; overflow-y: auto; flex: 1;">
+        <div style="
+          background: #f3f4f6;
+          border-radius: 8px;
+          padding: 15px;
+          margin-bottom: 15px;
+        ">
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;">
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #10b981;">
+                ${jsonData.summary?.success || 0}
+              </div>
+              <div style="font-size: 12px; color: #6b7280;">Success</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #f59e0b;">
+                ${jsonData.summary?.partial || 0}
+              </div>
+              <div style="font-size: 12px; color: #6b7280;">Partial</div>
+            </div>
+            <div style="text-align: center;">
+              <div style="font-size: 24px; font-weight: bold; color: #ef4444;">
+                ${jsonData.summary?.failed || 0}
+              </div>
+              <div style="font-size: 12px; color: #6b7280;">Failed</div>
+            </div>
+          </div>
+          <div style="
+            text-align: center;
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e5e7eb;
+          ">
+            <span style="font-size: 14px; color: #6b7280;">Success Rate:</span>
+            <span style="font-size: 18px; font-weight: bold; color: #4b5563; margin-left: 5px;">
+              ${successRate}
+            </span>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 15px;">
+          <h4 style="margin: 0 0 10px 0; color: #374151;">JSON Data:</h4>
+          <pre id="jsonResultsContent" style="
+            background: #1e293b;
+            color: #10b981;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 0;
+          ">${this.escapeHtml(jsonString)}</pre>
+        </div>
+      </div>
+      
+      <div style="
+        padding: 15px 20px;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+      ">
+        <button id="copyJSONBtn" style="
+          background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          📋 Copy JSON
+        </button>
+        <button id="downloadJSONBtn" style="
+          background: #10b981;
+          color: white;
+          border: none;
+          padding: 10px 20px;
+          border-radius: 6px;
+          cursor: pointer;
+          font-weight: 600;
+          font-size: 14px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        ">
+          💾 Download JSON
+        </button>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Add backdrop
+    const backdrop = document.createElement('div');
+    backdrop.id = 'bypassResultsBackdrop';
+    backdrop.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 9999;
+    `;
+    document.body.appendChild(backdrop);
+    
+    // Event listeners
+    document.getElementById('closeResultsModal').onclick = () => {
+      modal.remove();
+      backdrop.remove();
+    };
+    
+    backdrop.onclick = () => {
+      modal.remove();
+      backdrop.remove();
+    };
+    
+    // Copy JSON button
+    document.getElementById('copyJSONBtn').onclick = async () => {
+      try {
+        await navigator.clipboard.writeText(jsonString);
+        const btn = document.getElementById('copyJSONBtn');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✅ Copied!';
+        btn.style.background = '#10b981';
+        
+        setTimeout(() => {
+          btn.innerHTML = originalText;
+          btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        }, 2000);
+      } catch (error) {
+        console.error('Failed to copy:', error);
+        this.showNotification('Failed to copy to clipboard', 'error');
+      }
+    };
+    
+    // Download JSON button
+    document.getElementById('downloadJSONBtn').onclick = () => {
+      const blob = new Blob([jsonString], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `bypass_results_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+      
+      const btn = document.getElementById('downloadJSONBtn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '✅ Downloaded!';
+      
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+      }, 2000);
+    };
   }
 }
 

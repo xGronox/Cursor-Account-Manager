@@ -3,6 +3,43 @@
 
 (function () {
   "use strict";
+  
+  // Listen for messages for console expression evaluation
+  chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    if (request.type === 'evaluateExpression') {
+      try {
+        // Create a safe evaluation context
+        const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+        const func = new AsyncFunction('return ' + request.expression);
+        
+        // Execute and get result
+        func().then(result => {
+          sendResponse({ success: true, value: result });
+        }).catch(error => {
+          // Try as statement
+          try {
+            const stmtFunc = new AsyncFunction(request.expression);
+            stmtFunc().then(() => {
+              sendResponse({ success: true, value: undefined });
+            }).catch(err => {
+              sendResponse({ success: false, error: err.toString() });
+            });
+          } catch (e) {
+            sendResponse({ success: false, error: error.toString() });
+          }
+        });
+      } catch (error) {
+        // Fallback to eval for simple expressions
+        try {
+          const result = eval(request.expression);
+          sendResponse({ success: true, value: result });
+        } catch (e) {
+          sendResponse({ success: false, error: e.toString() });
+        }
+      }
+      return true; // Keep channel open for async response
+    }
+  });
 
   // Helper untuk membuat elemen
   function createElement(tag, attributes = {}, children = []) {

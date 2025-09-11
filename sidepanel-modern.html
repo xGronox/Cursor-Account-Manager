@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Cursor Account Manager - Sidebar</title>
+    <title>Cursor Manager Pro - Sidebar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="sidepanel-modern.css" />
@@ -23,37 +23,7 @@
         </div>
       </div>
 
-      <!-- Debug Panel (Hidden by default) -->
-      <div class="debug-section">
-        <button
-          id="debugToggle"
-          class="btn btn-link btn-sm debug-toggle"
-          style="display: none"
-          title="Toggle Debug Panel (Ctrl+Shift+D)"
-        >
-          🐛 Debug
-        </button>
-        <div id="debugPanel" class="debug-panel" style="display: none">
-          <h3>Debug Tools</h3>
-          <div class="debug-actions">
-            <button id="showStoredDataBtn" class="btn btn-secondary btn-sm">
-              📄 Show Data
-            </button>
-            <button id="clearAllDataBtn" class="btn btn-danger btn-sm">
-              🗑️ Clear All
-            </button>
-            <button
-              id="consolidateDuplicatesBtn"
-              class="btn btn-secondary btn-sm"
-            >
-              🔧 Fix Duplicates
-            </button>
-          </div>
-          <div id="debugOutput" class="debug-output"></div>
-        </div>
-      </div>
-
-      <!-- Current Account Section -->
+      <!-- Current Account Section with Modern Card Style -->
       <div class="current-account-section">
         <div class="current-label">Active Account</div>
         <div class="current-account" id="currentAccount">
@@ -66,10 +36,10 @@
       </div>
 
       <!-- Tab Navigation with Bypass Testing -->
-      <div class="tab-navigation navbar">
+      <div class="tab-navigation">
         <button id="accountsTab" class="tab-btn active">👤 Accounts</button>
         <button id="paymentsTab" class="tab-btn">💳 Cards</button>
-        <button id="bypassTab" class="tab-btn">🛡️ Bypass</button>
+        <button id="bypassTab" class="tab-btn bypass-tab">🛡️ Bypass</button>
       </div>
 
       <!-- Accounts Tab Content -->
@@ -88,21 +58,18 @@
           <button id="refreshStatusBtn" class="btn btn-success btn-sm">
             🔄 Refresh Status
           </button>
+        </div>
+
+        <!-- Advanced Actions -->
+        <div class="advanced-actions">
           <button id="toggleAdvancedBtn" class="btn btn-link btn-sm">
             ⚙️ Advanced Tools
           </button>
-        </div>
-
-        <!-- Advanced Actions (collapsible) -->
-        <div class="advanced-actions">
           <div id="advancedPanel" class="advanced-panel" style="display: none">
             <button id="importFolderBtn" class="btn btn-secondary btn-sm">
               📂 Import Folder
             </button>
-            <button
-              id="consolidateDuplicatesBtn"
-              class="btn btn-secondary btn-sm"
-            >
+            <button id="consolidateDuplicatesBtn" class="btn btn-secondary btn-sm">
               🔧 Fix Duplicates
             </button>
             <button id="clearAllDataBtn" class="btn btn-danger btn-sm">
@@ -160,7 +127,7 @@
       <!-- Payments Tab Content -->
       <div id="paymentsContent" class="tab-content" style="display: none">
         <!-- Payment Controls -->
-        <div class="controls-section">
+        <div class="quick-actions">
           <button id="importCardsBtn" class="btn btn-primary btn-sm">
             ➕ Import Cards
           </button>
@@ -182,7 +149,7 @@
             <span class="cards-count" id="cardsCount">(0)</span>
           </div>
 
-          <!-- Card Filters and Bulk Actions -->
+          <!-- Card Filters -->
           <div class="card-filters">
             <div class="filter-row">
               <input
@@ -200,19 +167,6 @@
                 <option value="unknown">Unknown</option>
               </select>
             </div>
-
-            <div class="bulk-actions" id="bulkActions" style="display: none">
-              <label class="select-all-container">
-                <input type="checkbox" id="selectAllCards" />
-                <span>Select All</span>
-              </label>
-              <button id="deleteSelectedBtn" class="btn btn-danger btn-sm">
-                🗑️ Delete Selected (<span id="selectedCount">0</span>)
-              </button>
-              <button id="clearSelectionBtn" class="btn btn-secondary btn-sm">
-                ✖️ Clear Selection
-              </button>
-            </div>
           </div>
 
           <div id="cardsList" class="cards-list scrollable">
@@ -222,82 +176,33 @@
           <div id="noCards" class="empty-state" style="display: none">
             <div class="empty-icon">💳</div>
             <p>No payment cards imported</p>
-            <p class="hint">
-              Click "Import Cards" to load card data from card.md files
-            </p>
-          </div>
-
-          <!-- Payment Form Detection -->
-          <div id="paymentFormInfo" class="form-info" style="display: none">
-            <div class="info-header">Payment Form Detected</div>
-            <div id="formFieldsInfo"></div>
+            <p class="hint">Click "Import Cards" to load card data</p>
           </div>
         </div>
       </div>
 
       <!-- NEW: Bypass Testing Tab Content -->
-      <div id="bypassContent" class="tab-content scrollable" style="display: none; overflow-y: auto; max-height: calc(100vh - 200px);">
-        <div class="bypass-section" style="padding: 16px;">
+      <div id="bypassContent" class="tab-content" style="display: none">
+        <div class="bypass-section">
           <div class="bypass-header">
-            <div class="bypass-title" style="display: flex; align-items: center; gap: 12px;">
+            <div class="bypass-title">
               <span class="icon">🛡️</span>
-              <span>Bypass Security Tester</span>
-              <span style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1f2937; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);">Under Development</span>
+              Bypass Security Tester
+              <span style="font-size: 11px; color: #ff9800; background: rgba(255, 152, 0, 0.1); padding: 2px 8px; border-radius: 4px; margin-left: 10px; vertical-align: middle;">Under Development</span>
             </div>
           </div>
 
           <!-- Target Configuration -->
           <div class="bypass-controls">
-            <div class="input-group" style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <div class="input-group">
               <input
                 type="text"
                 id="bypassTargetUrl"
-                class="bypass-url-input filter-input"
+                class="bypass-url-input"
                 placeholder="https://cursor.com/api/dashboard/delete-account"
-                style="flex: 1;"
               />
               <button id="bypassDetectUrl" class="btn btn-primary btn-sm">
                 🎯 Detect URL
-              </button>
-            </div>
-          </div>
-          
-          <!-- Action Buttons (Moved to Top) -->
-          <div style="margin-bottom: 16px; padding: 12px; background: #1e293b; border-radius: 8px; border: 1px solid #334155;">
-            <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 10px; font-weight: 600;">Quick Actions</div>
-            
-            <!-- All Actions in One Row -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px;">
-              <button 
-                id="startBypassTest" 
-                type="button"
-                style="padding: 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
-                ▶️ Start
-              </button>
-              <button 
-                id="stopBypassTest" 
-                type="button"
-                disabled 
-                style="padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: 500; opacity: 0.5; white-space: nowrap;">
-                ⏹️ Stop
-              </button>
-              <button 
-                id="exportBypassResults" 
-                type="button"
-                style="padding: 8px; background: #1f2937; color: white; border: 1px solid #374151; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
-                💾 Export
-              </button>
-              <button 
-                id="viewBypassResults" 
-                type="button"
-                style="padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
-                📊 Results
-              </button>
-              <button 
-                id="openBypassConsole" 
-                type="button"
-                style="padding: 8px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
-                🖥️ Console
               </button>
             </div>
           </div>
@@ -396,6 +301,18 @@
             116 tests selected
           </div>
 
+          <!-- Action Buttons -->
+          <div class="quick-actions" style="margin-top: 16px">
+            <button id="startBypassTest" class="btn btn-primary">
+              ▶️ Start Testing
+            </button>
+            <button id="stopBypassTest" class="btn btn-danger" disabled>
+              ⏹️ Stop
+            </button>
+            <button id="exportBypassResults" class="btn btn-secondary">
+              💾 Export Results
+            </button>
+          </div>
 
           <!-- Progress Section -->
           <div id="bypassProgressSection" class="bypass-progress" style="display: none">
@@ -437,7 +354,7 @@
         <p>Loading...</p>
       </div>
 
-      <!-- Notification -->
+      <!-- Notification Toast -->
       <div id="notification" class="notification" style="display: none">
         <span id="notificationText"></span>
       </div>
@@ -577,8 +494,10 @@
       style="display: none"
     />
 
+    <!-- Scripts -->
     <script src="services/payment.js"></script>
     <script src="services/account-deletion.js"></script>
+    <script src="services/bypass-tester.js"></script>
     <script src="sidepanel.js"></script>
   </body>
 </html>

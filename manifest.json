@@ -35,5 +35,16 @@
       "run_at": "document_end",
       "all_frames": true
     }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "services/console-service.js",
+        "bypass_working.js",
+        "bypass_invoice.js",
+        "bypass_delete_auto.js"
+      ],
+      "matches": ["<all_urls>"]
+    }
   ]
 }
