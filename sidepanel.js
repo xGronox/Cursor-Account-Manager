@@ -3488,22 +3488,53 @@ Available techniques:
         return;
       }
 
-      // Get current tab
-      const [tab] = await chrome.tabs.query({
+      const [currentTab] = await chrome.tabs.query({
         active: true,
         currentWindow: true,
       });
-      if (!tab) {
-        this.showNotification("❌ No active tab found", "error");
-        this.isActivatingTrial = false;
-        return;
-      }
 
-      // Try activation on current tab
-      await this.tryActivateOnCurrentTab(tab, cards);
+      if (!currentTab.url.includes("cursor.com")) {
+        // Create new tab with trial page first
+        const newTab = await chrome.tabs.create({
+          url: "https://cursor.com/trial",
+        });
+
+        // Wait for page to load and try to activate
+        setTimeout(async () => {
+          this.tryActivateWithCards(newTab.id, cards);
+        }, 3000);
+      } else if (currentTab.url.includes("checkout.stripe.com")) {
+        // We're already on Stripe checkout - start activation directly
+        this.showNotification(
+          `🎯 Starting activation with ${cards.length} cards...`,
+          "info"
+        );
+
+        chrome.tabs.sendMessage(
+          currentTab.id,
+          {
+            type: "startProTrialActivation",
+            cards: cards,
+          },
+          (response) => {
+            if (response && response.success) {
+              this.showNotification(
+                "✅ Pro Trial activation started!",
+                "success"
+              );
+            } else {
+              this.showNotification("❌ Failed to start activation", "error");
+              this.isActivatingTrial = false;
+            }
+          }
+        );
+      } else {
+        // We're on cursor.com, try to navigate to trial/checkout
+        this.tryActivateOnCurrentTab(currentTab, cards);
+      }
     } catch (error) {
-      console.error("Pro Trial activation error:", error);
-      this.showNotification(`❌ Activation failed: ${error.message}`, "error");
+      console.error("Error activating Pro Trial:", error);
+      this.showNotification("❌ Error activating Pro Trial", "error");
       this.isActivatingTrial = false;
     }
   }
@@ -3536,11 +3567,46 @@ Available techniques:
   }
 
   async tryActivateOnCurrentTab(tab, cards) {
+    console.log(
+      `🎯 Trying Pro Trial activation on tab: ${tab.url.substring(0, 50)}...`
+    );
+
+    // Check if we're on Stripe checkout page and use direct activation
+    if (tab.url.includes("checkout.stripe.com")) {
+      this.showNotification(
+        `🎯 Starting activation with ${cards.length} cards...`,
+        "info"
+      );
+
+      chrome.tabs.sendMessage(
+        tab.id,
+        {
+          type: "startProTrialActivation",
+          cards: cards,
+        },
+        (response) => {
+          if (response && response.success) {
+            this.showNotification(
+              "✅ Pro Trial activation started!",
+              "success"
+            );
+            this.isActivatingTrial = false;
+          } else {
+            this.showNotification("❌ Failed to start activation", "error");
+            this.isActivatingTrial = false;
+          }
+        }
+      );
+      return;
+    }
+
+    // If not on cursor.com, try different pages
     if (!tab.url.includes("cursor.com")) {
       await this.tryDifferentPages(tab, cards);
       return;
     }
 
+    // For cursor.com pages, try the regular flow
     chrome.tabs.sendMessage(
       tab.id,
       {
