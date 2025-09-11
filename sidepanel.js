@@ -181,6 +181,16 @@ class CursorAccountSidebar {
       "Import folder button"
     );
 
+    // Import Multiple Files button (alternative to folder)
+    safeAddListener(
+      "importMultipleBtn",
+      "click",
+      () => {
+        this.importMultipleFiles();
+      },
+      "Import multiple files button"
+    );
+
     // Downloads file input change
     safeAddListener(
       "downloadsFileInput",
@@ -1202,7 +1212,57 @@ Choose NO if you want to keep the backup file.`
 
   // Import from folder
   importFromFolder() {
+    console.log("🚀 importFromFolder called");
     document.getElementById("folderInput").click();
+  }
+
+  // Import multiple files - SAFE ALTERNATIVE
+  importMultipleFiles() {
+    console.log("🚀 importMultipleFiles called");
+
+    try {
+      const multiInput = document.createElement("input");
+      multiInput.type = "file";
+      multiInput.multiple = true;
+      multiInput.accept = ".json";
+      multiInput.style.display = "none";
+
+      multiInput.addEventListener("change", async (e) => {
+        console.log("📁 Multiple file input changed");
+        try {
+          if (e.target.files && e.target.files.length > 0) {
+            const fileArray = Array.from(e.target.files);
+            console.log(`📋 Selected ${fileArray.length} files`);
+
+            // Show initial message
+            this.showNotification(
+              `Selected ${fileArray.length} files. Starting import...`,
+              "info"
+            );
+
+            await this.processFilesManually(fileArray);
+          }
+        } catch (processError) {
+          console.error("❌ Error processing multiple files:", processError);
+          this.showNotification("Error processing selected files", "error");
+        }
+
+        // Clean up
+        try {
+          document.body.removeChild(multiInput);
+        } catch (cleanupError) {
+          console.warn("⚠️ Could not clean up input element");
+        }
+      });
+
+      document.body.appendChild(multiInput);
+      multiInput.click();
+
+      console.log("✅ Multiple file selector created");
+    } catch (error) {
+      console.error("❌ Error creating multiple file selector:", error);
+      this.showNotification("Could not open file selector", "error");
+    }
   }
 
   // Handle multiple file import from Downloads
@@ -1210,31 +1270,52 @@ Choose NO if you want to keep the backup file.`
     await this.processFileImport(files, "downloadsFileInput");
   }
 
-  // Handle folder import
+  // Handle folder import - SIMPLIFIED SAFE VERSION
   async handleFolderImport(files) {
-    // Filter only JSON files from the folder
-    const jsonFiles = Array.from(files).filter((file) =>
-      file.name.toLowerCase().endsWith(".json")
-    );
+    console.log("🚀 handleFolderImport called with:", files);
 
-    if (jsonFiles.length === 0) {
+    try {
+      if (!files || files.length === 0) {
+        this.showNotification("No files selected", "error");
+        return;
+      }
+
+      // Convert to simple array and filter JSON files
+      const fileArray = [];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file && file.name && file.name.toLowerCase().endsWith(".json")) {
+          fileArray.push(file);
+        }
+      }
+
+      console.log(`📁 Found ${fileArray.length} JSON files in folder`);
+
+      if (fileArray.length === 0) {
+        this.showNotification(
+          "No JSON files found in the selected folder",
+          "warning"
+        );
+        return;
+      }
+
+      // Show initial notification
       this.showNotification(
-        "No JSON files found in the selected folder",
-        "error"
+        `Found ${fileArray.length} JSON files. Starting import...`,
+        "info"
       );
-      return;
-    }
 
-    this.showNotification(
-      `Found ${jsonFiles.length} JSON files in folder, importing...`,
-      "info"
-    );
-    await this.processFileImport(jsonFiles, "folderInput");
+      // Process files one by one manually - AVOID COMPLEX BATCH PROCESSING
+      await this.processFilesManually(fileArray);
+    } catch (error) {
+      console.error("💥 Error in handleFolderImport:", error);
+      this.showNotification(`Folder import failed: ${error.message}`, "error");
+    }
   }
 
-  // Process file import (shared by both methods)
-  async processFileImport(files, inputId) {
-    if (!files || files.length === 0) return;
+  // Manual file processing - SIMPLEST POSSIBLE APPROACH
+  async processFilesManually(files) {
+    console.log("🔧 Processing files manually:", files.length);
 
     let importedCount = 0;
     let skippedCount = 0;
@@ -1243,45 +1324,247 @@ Choose NO if you want to keep the backup file.`
     this.showLoading(true);
 
     try {
-      for (const file of files) {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+
         try {
-          // Skip non-JSON files
-          if (!file.name.toLowerCase().endsWith(".json")) {
+          console.log(
+            `📝 Processing file ${i + 1}/${files.length}: ${file.name}`
+          );
+
+          // Show progress
+          this.showNotification(
+            `Processing ${i + 1}/${files.length}: ${file.name}`,
+            "info"
+          );
+
+          // Wait between files - PREVENT OVERLOAD
+          if (i > 0) {
+            await new Promise((resolve) => setTimeout(resolve, 1000)); // 1 second delay
+          }
+
+          // Read file
+          const text = await file.text();
+          console.log(`📖 File read: ${text.length} characters`);
+
+          // Size check
+          if (text.length > 300 * 1024) {
+            // 300KB limit - VERY CONSERVATIVE
+            console.warn(`⚠️ File too large: ${file.name}`);
+            errorCount++;
             continue;
           }
 
-          const text = await file.text();
-
-          // Try to import - let the service handle duplicate detection
-          const response = await chrome.runtime.sendMessage({
-            type: "importAccountJSON",
-            jsonText: text,
-            customName: null,
-          });
-
-          if (response.success) {
-            importedCount++;
-            console.log(`Imported: ${file.name} as ${response.data}`);
-          } else {
-            // Check if error is due to duplicate
-            if (response.error && response.error.includes("already exists")) {
-              skippedCount++;
-              console.log(
-                `Skipped duplicate: ${file.name} - ${response.error}`
-              );
-            } else {
-              errorCount++;
-              console.error(`Failed to import: ${file.name}`, response.error);
-            }
+          // JSON validation
+          try {
+            JSON.parse(text);
+          } catch (e) {
+            console.error(`❌ Invalid JSON: ${file.name}`);
+            errorCount++;
+            continue;
           }
-        } catch (error) {
-          console.error("Error importing file:", file.name, error);
+
+          // Import using single file method - REUSE WORKING CODE
+          try {
+            const response = await chrome.runtime.sendMessage({
+              type: "importAccountJSON",
+              jsonText: text,
+              customName: null,
+            });
+
+            if (response && response.success) {
+              importedCount++;
+              console.log(`✅ Imported: ${file.name}`);
+            } else {
+              const errorMsg = response?.error || "Unknown error";
+              if (errorMsg.includes("already exists")) {
+                skippedCount++;
+                console.log(`⏭️ Skipped duplicate: ${file.name}`);
+              } else {
+                errorCount++;
+                console.error(`❌ Import failed: ${file.name}`);
+              }
+            }
+          } catch (msgError) {
+            console.error(`❌ Message error for ${file.name}:`, msgError);
+            errorCount++;
+          }
+        } catch (fileError) {
+          console.error(`💥 Error processing ${file.name}:`, fileError);
           errorCount++;
         }
       }
 
-      // Show detailed results
-      let message = `Import: ${importedCount} added`;
+      // Show results
+      let message = `Import completed: ${importedCount} added`;
+      if (skippedCount > 0) message += `, ${skippedCount} skipped`;
+      if (errorCount > 0) message += `, ${errorCount} errors`;
+
+      const type =
+        errorCount > 0 ? "warning" : importedCount > 0 ? "success" : "info";
+      this.showNotification(message, type);
+
+      // Reload if successful imports
+      if (importedCount > 0) {
+        await this.loadAccounts();
+      }
+    } catch (error) {
+      console.error("💥 Error in processFilesManually:", error);
+      this.showNotification("Import process failed", "error");
+    } finally {
+      this.showLoading(false);
+    }
+  }
+
+  // Process file import (shared by both methods) - ULTRA SAFE VERSION
+  async processFileImport(files, inputId) {
+    console.log("🚀 Starting processFileImport with", files?.length, "files");
+
+    if (!files || files.length === 0) {
+      console.log("❌ No files provided");
+      return;
+    }
+
+    let importedCount = 0;
+    let skippedCount = 0;
+    let errorCount = 0;
+
+    this.showLoading(true);
+
+    try {
+      // Convert FileList to Array and filter JSON files - SAFE
+      let jsonFiles = [];
+      try {
+        jsonFiles = Array.from(files).filter((file) => {
+          const isJson =
+            file && file.name && file.name.toLowerCase().endsWith(".json");
+          console.log(`📁 File: ${file?.name}, isJSON: ${isJson}`);
+          return isJson;
+        });
+        console.log(`✅ Found ${jsonFiles.length} JSON files`);
+      } catch (error) {
+        console.error("❌ Error filtering files:", error);
+        throw new Error("Failed to process file list");
+      }
+
+      if (jsonFiles.length === 0) {
+        this.showNotification("No JSON files found to import", "warning");
+        return;
+      }
+
+      // ULTRA CONSERVATIVE SETTINGS - Process ONE file at a time
+      console.log("🐌 Using ULTRA SAFE mode - processing one file at a time");
+
+      for (let i = 0; i < jsonFiles.length; i++) {
+        const file = jsonFiles[i];
+
+        try {
+          console.log(
+            `📝 Processing file ${i + 1}/${jsonFiles.length}: ${file.name}`
+          );
+
+          // Show progress for each file
+          this.showNotification(
+            `Processing ${i + 1}/${jsonFiles.length}: ${file.name}`,
+            "info"
+          );
+
+          // Add significant delay between files - PREVENT OVERLOAD
+          if (i > 0) {
+            console.log("⏳ Waiting 500ms before next file...");
+            await this.delay(500);
+          }
+
+          // Read file with extended timeout - PREVENT HANGS
+          console.log(`📖 Reading file: ${file.name}`);
+          let text;
+          try {
+            text = await this.readFileWithTimeout(file, 10000); // 10s timeout
+            console.log(`✅ File read successfully, length: ${text.length}`);
+          } catch (readError) {
+            console.error(`❌ Failed to read file ${file.name}:`, readError);
+            errorCount++;
+            continue;
+          }
+
+          // Validate JSON size - PREVENT MEMORY ISSUES
+          if (text.length > 512 * 1024) {
+            // 512KB limit - VERY CONSERVATIVE
+            console.warn(
+              `⚠️ File ${file.name} too large: ${text.length} bytes`
+            );
+            errorCount++;
+            continue;
+          }
+
+          // Validate JSON format before sending - PREVENT BACKEND CRASH
+          try {
+            JSON.parse(text);
+            console.log(`✅ JSON validation passed for ${file.name}`);
+          } catch (parseError) {
+            console.error(`❌ Invalid JSON in ${file.name}:`, parseError);
+            errorCount++;
+            continue;
+          }
+
+          // Send message with extended timeout - PREVENT HANGS
+          console.log(`📤 Sending import message for ${file.name}`);
+          let response;
+          try {
+            response = await this.sendMessageWithTimeout(
+              {
+                type: "importAccountJSON",
+                jsonText: text,
+                customName: null,
+              },
+              15000 // 15s timeout - VERY GENEROUS
+            );
+            console.log(
+              `✅ Import response received for ${file.name}:`,
+              response
+            );
+          } catch (messageError) {
+            console.error(`❌ Message timeout for ${file.name}:`, messageError);
+            errorCount++;
+            continue;
+          }
+
+          // Process response - SAFE HANDLING
+          if (response && response.success) {
+            importedCount++;
+            console.log(
+              `🎉 Successfully imported: ${file.name} as ${response.data}`
+            );
+          } else {
+            const errorMsg = response?.error || "Unknown error";
+            if (errorMsg.includes("already exists")) {
+              skippedCount++;
+              console.log(`⏭️ Skipped duplicate: ${file.name}`);
+            } else {
+              errorCount++;
+              console.error(`❌ Import failed: ${file.name} - ${errorMsg}`);
+            }
+          }
+        } catch (fileError) {
+          errorCount++;
+          console.error(
+            `💥 Critical error processing ${file.name}:`,
+            fileError
+          );
+        }
+
+        // Force garbage collection hint
+        if (i % 5 === 0 && i > 0) {
+          console.log("🗑️ Forcing garbage collection hint...");
+          if (window.gc) {
+            window.gc();
+          }
+          await this.delay(200); // Extra breathing room
+        }
+      }
+
+      // Show final results
+      let message = `Import completed: ${importedCount} added`;
       if (skippedCount > 0) {
         message += `, ${skippedCount} skipped`;
       }
@@ -1289,19 +1572,79 @@ Choose NO if you want to keep the backup file.`
         message += `, ${errorCount} errors`;
       }
 
-      this.showNotification(message, importedCount > 0 ? "success" : "info");
+      const notificationType =
+        errorCount > 0 ? "warning" : importedCount > 0 ? "success" : "info";
+      this.showNotification(message, notificationType);
+      console.log(`📊 Final results: ${message}`);
 
+      // Reload accounts if any were imported
       if (importedCount > 0) {
+        console.log("🔄 Reloading accounts...");
         await this.loadAccounts();
       }
     } catch (error) {
-      console.error("Error during bulk import:", error);
-      this.showNotification("Error importing files", "error");
+      console.error("💥💥💥 CRITICAL ERROR during bulk import:", error);
+      this.showNotification(`Import failed: ${error.message}`, "error");
     } finally {
+      console.log("🏁 Import process finished, cleaning up...");
       this.showLoading(false);
-      // Clear the file input
-      document.getElementById(inputId).value = "";
+
+      // Clear the file input - SAFE
+      try {
+        const input = document.getElementById(inputId);
+        if (input) {
+          input.value = "";
+          console.log("✅ File input cleared");
+        }
+      } catch (e) {
+        console.warn("⚠️ Could not clear file input:", e);
+      }
     }
+  }
+
+  // Helper: Read file with timeout to prevent hangs
+  async readFileWithTimeout(file, timeout = 5000) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error(`File read timeout: ${file.name}`));
+      }, timeout);
+
+      file
+        .text()
+        .then((text) => {
+          clearTimeout(timer);
+          resolve(text);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+
+  // Helper: Send message with timeout to prevent hangs
+  async sendMessageWithTimeout(message, timeout = 10000) {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        reject(new Error("Message timeout"));
+      }, timeout);
+
+      chrome.runtime
+        .sendMessage(message)
+        .then((response) => {
+          clearTimeout(timer);
+          resolve(response);
+        })
+        .catch((error) => {
+          clearTimeout(timer);
+          reject(error);
+        });
+    });
+  }
+
+  // Helper: Delay function for throttling
+  async delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   async clearAllData() {

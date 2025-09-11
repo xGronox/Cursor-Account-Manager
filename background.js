@@ -186,12 +186,79 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           break;
 
         case "importAccountJSON":
-          const accountName = await accountService.importAccountFromJSON(
-            request.jsonText,
-            request.customName,
-            request.overrideExisting || false
-          );
-          sendResponse({ success: true, data: accountName });
+          console.log("📥 Received importAccountJSON request");
+          try {
+            // ULTRA SAFE VALIDATION
+            if (!request) {
+              throw new Error("No request data provided");
+            }
+
+            if (!request.jsonText || typeof request.jsonText !== "string") {
+              console.error(
+                "❌ Invalid JSON data type:",
+                typeof request.jsonText
+              );
+              throw new Error("Invalid JSON data provided");
+            }
+
+            // VERY CONSERVATIVE size limit - 512KB
+            if (request.jsonText.length > 512 * 1024) {
+              console.error(
+                "❌ JSON too large:",
+                request.jsonText.length,
+                "bytes"
+              );
+              throw new Error(
+                `JSON file too large (${Math.round(
+                  request.jsonText.length / 1024
+                )}KB > 512KB limit)`
+              );
+            }
+
+            console.log(
+              "✅ JSON size validation passed:",
+              request.jsonText.length,
+              "bytes"
+            );
+
+            // Parse and validate JSON before processing
+            let jsonData;
+            try {
+              jsonData = JSON.parse(request.jsonText);
+              console.log("✅ JSON parsing successful");
+            } catch (parseError) {
+              console.error("❌ JSON parse error:", parseError);
+              throw new Error(`Invalid JSON format: ${parseError.message}`);
+            }
+
+            // Validate JSON structure
+            if (!jsonData || typeof jsonData !== "object") {
+              throw new Error("Invalid JSON structure - not an object");
+            }
+
+            console.log("📤 Calling accountService.importAccountFromJSON");
+            const accountName = await accountService.importAccountFromJSON(
+              request.jsonText,
+              request.customName,
+              request.overrideExisting || false
+            );
+
+            console.log("🎉 Import successful:", accountName);
+            sendResponse({ success: true, data: accountName });
+          } catch (error) {
+            console.error("💥 Import error:", error);
+
+            // Safe error response
+            const errorResponse = {
+              success: false,
+              error: error.message || "Unknown import error",
+              isDuplicate: error.isDuplicate || false,
+              existingAccount: error.existingAccount || null,
+            };
+
+            console.log("📤 Sending error response:", errorResponse);
+            sendResponse(errorResponse);
+          }
           break;
 
         case "exportAccount":
