@@ -146,6 +146,16 @@ class CursorAccountSidebar {
 
     // NEW: Bypass Testing Event Listeners
     this.setupBypassEventListeners();
+    
+    // Initialize Bypass Settings Manager
+    if (window.BypassSettingsManager) {
+      this.bypassSettings = new window.BypassSettingsManager();
+    }
+    
+    // Initialize Bypass Testing Handler
+    if (window.BypassTestingHandler) {
+      this.bypassHandler = new window.BypassTestingHandler();
+    }
 
     // Card filter and selection functionality
     const cardFilterInput = document.getElementById("cardFilterInput");
@@ -2171,28 +2181,14 @@ Choose NO if you want to keep the backup file.`
     document.getElementById("bypassProgressSection").style.display = "block";
     document.getElementById("bypassResultsSection").style.display = "none";
     
-    // Reset progress
-    this.bypassTestResults = [];
-    this.bypassTestProgress = 0;
-    this.bypassTestTotal = 0;
-    this.bypassTestRunning = true;
+    // Get settings from bypass settings manager
+    const settings = this.bypassSettings ? this.bypassSettings.getSettings() : {};
     
-    try {
-      // Send message to background script to start testing
-      const response = await chrome.runtime.sendMessage({
-        type: "startBypassTest",
-        targetUrl: targetUrl,
-        techniques: techniques
-      });
-      
-      if (response.success) {
-        this.showNotification("Bypass testing started", "info");
-        this.monitorBypassProgress();
-      } else {
-        throw new Error(response.error || "Failed to start testing");
-      }
-    } catch (error) {
-      console.error("Error starting bypass test:", error);
+    // Use the bypass handler to start testing
+    if (this.bypassHandler) {
+      await this.bypassHandler.startTest(targetUrl, techniques, settings);
+    } else {
+      console.error("Bypass handler not initialized");
       this.showNotification("Failed to start bypass testing", "error");
       this.resetBypassUI();
     }
@@ -2249,18 +2245,10 @@ Choose NO if you want to keep the backup file.`
   }
 
   async stopBypassTesting() {
-    this.bypassTestRunning = false;
-    
-    try {
-      await chrome.runtime.sendMessage({
-        type: "stopBypassTest"
-      });
-      
+    if (this.bypassHandler) {
+      this.bypassHandler.stopTest();
       this.showNotification("Bypass testing stopped", "info");
-    } catch (error) {
-      console.error("Error stopping bypass test:", error);
     }
-    
     this.resetBypassUI();
   }
 
@@ -2306,42 +2294,10 @@ Choose NO if you want to keep the backup file.`
   }
 
   async exportBypassResults() {
-    if (!this.bypassTestResults || this.bypassTestResults.length === 0) {
-      this.showNotification("No results to export", "warning");
-      return;
-    }
-    
-    try {
-      const targetUrl = document.getElementById("bypassTargetUrl").value;
-      const timestamp = new Date().toISOString();
-      
-      const exportData = {
-        timestamp: timestamp,
-        targetUrl: targetUrl,
-        results: this.bypassTestResults,
-        summary: {
-          total: this.bypassTestResults.length,
-          successful: this.bypassTestResults.filter(r => r.status === "success").length,
-          partial: this.bypassTestResults.filter(r => r.status === "partial").length,
-          failed: this.bypassTestResults.filter(r => r.status === "failed").length
-        }
-      };
-      
-      // Create blob and download
-      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `bypass-test-results-${Date.now()}.json`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      
-      this.showNotification("Results exported successfully", "success");
-    } catch (error) {
-      console.error("Error exporting results:", error);
-      this.showNotification("Failed to export results", "error");
+    if (this.bypassHandler) {
+      this.bypassHandler.exportResults();
+    } else {
+      this.showNotification("No bypass handler available", "error");
     }
   }
 

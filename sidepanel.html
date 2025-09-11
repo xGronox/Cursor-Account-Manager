@@ -246,6 +246,13 @@
             </div>
           </div>
 
+          <!-- Settings Button -->
+          <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
+            <button id="bypassSettingsBtn" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; gap: 6px;">
+              <span>⚙️</span> Settings
+            </button>
+          </div>
+
           <!-- Target Configuration -->
           <div class="bypass-controls">
             <div class="input-group" style="display: flex; gap: 8px; margin-bottom: 16px;">
@@ -520,6 +527,93 @@
       </div>
     </div>
 
+    <!-- Bypass Settings Modal -->
+    <div id="bypassSettingsModal" class="modal" style="display: none">
+      <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+          <h3>🛡️ Bypass Testing Settings</h3>
+          <button class="modal-close" id="closeBypassSettingsModal">✕</button>
+        </div>
+        <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+          <!-- URL Presets Section -->
+          <div class="settings-section">
+            <h4 style="margin-bottom: 12px; color: var(--text-primary);">URL Presets</h4>
+            <div class="form-group">
+              <label for="bypassPresetName">Preset Name:</label>
+              <input type="text" id="bypassPresetName" placeholder="e.g., Cursor API" />
+            </div>
+            <div class="form-group">
+              <label for="bypassPresetUrl">URL:</label>
+              <input type="text" id="bypassPresetUrl" placeholder="https://cursor.com/api/endpoint" />
+            </div>
+            <button id="addBypassPreset" class="btn btn-secondary btn-sm">➕ Add Preset</button>
+            
+            <div id="bypassPresetsList" style="margin-top: 12px;">
+              <!-- Presets will be populated here -->
+            </div>
+          </div>
+
+          <hr style="margin: 20px 0; border: 1px solid var(--border-color);" />
+
+          <!-- Advanced Options Section -->
+          <div class="settings-section">
+            <h4 style="margin-bottom: 12px; color: var(--text-primary);">Advanced Options</h4>
+            <div class="form-group">
+              <label for="bypassRequestDelay">Request Delay (ms):</label>
+              <input type="number" id="bypassRequestDelay" value="500" min="0" max="5000" />
+            </div>
+            <div class="form-group">
+              <label for="bypassTimeout">Timeout (seconds):</label>
+              <input type="number" id="bypassTimeout" value="10" min="1" max="60" />
+            </div>
+            <div class="form-group">
+              <label for="bypassConcurrency">Max Concurrent Requests:</label>
+              <input type="number" id="bypassConcurrency" value="5" min="1" max="20" />
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="bypassVerboseLog" checked />
+                Enable Verbose Logging
+              </label>
+            </div>
+            <div class="form-group">
+              <label>
+                <input type="checkbox" id="bypassAutoExport" />
+                Auto-export results after test
+              </label>
+            </div>
+          </div>
+
+          <hr style="margin: 20px 0; border: 1px solid var(--border-color);" />
+
+          <!-- Default Techniques Section -->
+          <div class="settings-section">
+            <h4 style="margin-bottom: 12px; color: var(--text-primary);">Default Techniques</h4>
+            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+              Select which techniques should be enabled by default:
+            </p>
+            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
+              <label><input type="checkbox" id="defaultTechParam" checked /> Parameter Injection</label>
+              <label><input type="checkbox" id="defaultTechHeader" checked /> Header Manipulation</label>
+              <label><input type="checkbox" id="defaultTechMethod" checked /> Method Override</label>
+              <label><input type="checkbox" id="defaultTechContent" checked /> Content-Type</label>
+              <label><input type="checkbox" id="defaultTechAuth" checked /> Authorization</label>
+              <label><input type="checkbox" id="defaultTechStorage" checked /> Storage Manipulation</label>
+              <label><input type="checkbox" id="defaultTechFrontend" checked /> Frontend Override</label>
+              <label><input type="checkbox" id="defaultTechRace" checked /> Race Condition</label>
+              <label><input type="checkbox" id="defaultTechEncoding" checked /> Encoding Bypass</label>
+              <label><input type="checkbox" id="defaultTechEndpoint" checked /> Alt Endpoints</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button id="saveBypassSettings" class="btn btn-primary">💾 Save Settings</button>
+          <button id="resetBypassSettings" class="btn btn-danger btn-sm">🔄 Reset to Default</button>
+          <button id="cancelBypassSettings" class="btn btn-secondary">Cancel</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Import Cards Modal -->
     <div id="importCardsModal" class="modal" style="display: none">
       <div class="modal-content">
@@ -579,6 +673,8 @@
 
     <script src="services/payment.js"></script>
     <script src="services/account-deletion.js"></script>
+    <script src="bypass-settings.js"></script>
+    <script src="bypass-handler.js"></script>
     <script src="sidepanel.js"></script>
   </body>
 </html>

@@ -1057,6 +1057,13 @@ body {
 }
 
 /* Scrollbar Styling */
+.scrollable {
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: var(--bg-tertiary) var(--bg-secondary);
+}
+
 .scrollable::-webkit-scrollbar {
   width: 6px;
 }
@@ -1073,6 +1080,21 @@ body {
 
 .scrollable::-webkit-scrollbar-thumb:hover {
   background: var(--primary-color);
+}
+
+/* Specific scrollable areas */
+.sidebar-accounts-list.scrollable {
+  max-height: calc(100vh - 450px);
+  min-height: 200px;
+}
+
+.cards-list.scrollable {
+  max-height: calc(100vh - 400px);
+  min-height: 200px;
+}
+
+#bypassContent.scrollable {
+  max-height: calc(100vh - 200px);
 }
 
 /* Debug Panel */
