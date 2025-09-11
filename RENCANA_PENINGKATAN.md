@@ -500,10 +500,12 @@ _Status: Ready for Review_
 ```
 Files to remove/relocate:
 - ✅ test*.html (7 files) → /tests/ (COMPLETED)
-- branch/ folder → archive or delete
+- ✅ branch/ folder → archive or delete (COMPLETED)
+- ✅ referensi/ folder → remove (COMPLETED)
+- ✅ bypass*.* (9 files) → /modules/bypass/ (COMPLETED)
 - Duplicate markdown files → consolidate
 - Unused service files → remove or consolidate
-- Redundant files → consolidate or remove
+- CSS/HTML variants → consolidate
 ```
 
 ### B. Security Checklist

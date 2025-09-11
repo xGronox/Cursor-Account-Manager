@@ -50,9 +50,9 @@
         "services/generator.js",
         "stripe.js",
         "auto-fill.js",
-        "bypass_working.js",
-        "bypass_invoice.js",
-        "bypass_delete_auto.js"
+        "modules/bypass/bypass_working.js",
+        "modules/bypass/bypass_invoice.js",
+        "modules/bypass/bypass_delete_auto.js"
       ],
       "matches": ["<all_urls>"]
     }
