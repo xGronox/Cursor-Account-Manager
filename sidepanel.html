@@ -72,6 +72,7 @@
       <div class="tab-navigation navbar">
         <button id="accountsTab" class="tab-btn active">👤 Accounts</button>
         <button id="paymentsTab" class="tab-btn">💳 Cards</button>
+        <button id="generatorTab" class="tab-btn">🎲 Generator</button>
         <button id="bypassTab" class="tab-btn">🛡️ Bypass</button>
       </div>
 
@@ -234,6 +235,215 @@
           <div id="paymentFormInfo" class="form-info" style="display: none">
             <div class="info-header">Payment Form Detected</div>
             <div id="formFieldsInfo"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generator Tab Content -->
+      <div id="generatorContent" class="tab-content" style="display: none">
+        <!-- Payment Generator Panel -->
+        <div class="generator-panel">
+          <div class="panel-header">
+            <h3>💳 Payment Data Generator</h3>
+          </div>
+
+          <div class="panel-content">
+            <div class="settings-grid">
+              <div class="settings-group">
+                <label>BIN (Bank Identification Number):</label>
+                <div class="bin-input-container">
+                  <input
+                    type="text"
+                    id="binInput"
+                    value="552461"
+                    placeholder="e.g., 552461 or 5524xxxxxxxxx"
+                    class="form-input"
+                  />
+                  <div
+                    id="binHistoryDropdown"
+                    class="bin-history-dropdown"
+                    style="display: none"
+                  >
+                    <!-- BIN history items will be populated here -->
+                  </div>
+                </div>
+              </div>
+
+              <div class="settings-group">
+                <label>Quantity:</label>
+                <input
+                  type="number"
+                  id="cardQuantity"
+                  min="1"
+                  max="100"
+                  value="10"
+                  class="form-input"
+                />
+              </div>
+
+              <div class="settings-group">
+                <label>Month:</label>
+                <select id="monthSelect" class="form-select">
+                  <option value="Random">Random</option>
+                  <option value="01">01</option>
+                  <option value="02">02</option>
+                  <option value="03">03</option>
+                  <option value="04">04</option>
+                  <option value="05">05</option>
+                  <option value="06">06</option>
+                  <option value="07">07</option>
+                  <option value="08">08</option>
+                  <option value="09">09</option>
+                  <option value="10">10</option>
+                  <option value="11">11</option>
+                  <option value="12">12</option>
+                </select>
+              </div>
+
+              <div class="settings-group">
+                <label>Year:</label>
+                <select id="yearSelect" class="form-select">
+                  <option value="Random">Random</option>
+                  <option value="25">2025</option>
+                  <option value="26">2026</option>
+                  <option value="27">2027</option>
+                  <option value="28">2028</option>
+                  <option value="29">2029</option>
+                  <option value="30">2030</option>
+                  <option value="31">2031</option>
+                  <option value="32">2032</option>
+                  <option value="33">2033</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="settings-group action-buttons">
+              <button id="generateCardsBtn" class="btn btn-primary">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M20,8H4V6H20M20,18H4V12H20M20,4H4C2.89,4 2,4.89 2,6V18A2,2 0 0,0 4,20H20A2,2 0 0,0 22,18V6C22,4.89 21.11,4 20,4Z"
+                  />
+                </svg>
+                Generate Payment Data
+              </button>
+            </div>
+
+            <div class="output-section">
+              <label>Generated Payment Data:</label>
+              <textarea
+                id="cardOutput"
+                readonly
+                class="output-textarea"
+                placeholder="Generated payment data will appear here..."
+              ></textarea>
+            </div>
+
+            <div class="settings-grid">
+              <div class="settings-group">
+                <label>
+                  <input type="checkbox" id="autoFillEnabled" checked />
+                  Enable automatic form filling
+                </label>
+              </div>
+
+              <div class="settings-group">
+                <label>
+                  <input type="checkbox" id="autoSubmitEnabled" />
+                  Auto-submit forms after filling (be careful!)
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Address Generator Panel -->
+        <div class="generator-panel">
+          <div class="panel-header">
+            <h3>🏠 Address & Name Generator</h3>
+          </div>
+
+          <div class="panel-content">
+            <div class="settings-group">
+              <label>Country:</label>
+              <select id="countrySelect" class="form-select">
+                <option value="US">United States</option>
+                <option value="CA">Canada</option>
+                <option value="GB">United Kingdom</option>
+                <option value="DE">Germany</option>
+                <option value="FR">France</option>
+                <option value="AU">Australia</option>
+              </select>
+            </div>
+
+            <div class="settings-group action-buttons">
+              <button id="generateAddressBtn" class="btn btn-primary">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path d="M10,20V14H14V20H19V12H22L12,3L2,12H5V20H10Z" />
+                </svg>
+                Generate Address & Name
+              </button>
+            </div>
+
+            <div class="output-section">
+              <label>Generated Address & Name:</label>
+              <textarea
+                id="personalOutput"
+                readonly
+                class="output-textarea"
+                placeholder="Generated addresses and names will appear here..."
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pro Trial Activation Panel -->
+        <div class="generator-panel">
+          <div class="panel-header">
+            <h3>🚀 Pro Trial Activation</h3>
+          </div>
+
+          <div class="panel-content">
+            <div class="settings-group action-buttons">
+              <button id="activateProTrialBtn" class="btn btn-success">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    d="M12,2A3,3 0 0,1 15,5V11A3,3 0 0,1 12,14A3,3 0 0,1 9,11V5A3,3 0 0,1 12,2M19,11C19,14.53 16.39,17.44 13,17.93V21H11V17.93C7.61,17.44 5,14.53 5,11H7A5,5 0 0,0 12,16A5,5 0 0,0 17,11H19Z"
+                  />
+                </svg>
+                Activate Pro Trial
+              </button>
+            </div>
+
+            <div class="form-hint">
+              <p><strong>Instructions:</strong></p>
+              <p>1. Make sure you're logged into Cursor.com</p>
+              <p>2. Click "Activate Pro Trial" to automatically:</p>
+              <ul>
+                <li>Generate valid payment data</li>
+                <li>Navigate to trial activation page</li>
+                <li>Fill payment form automatically</li>
+                <li>Submit trial activation</li>
+              </ul>
+              <p>
+                <strong>Note:</strong> This will use test payment data that may
+                trigger validation but won't charge real cards.
+              </p>
+            </div>
           </div>
         </div>
       </div>

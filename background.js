@@ -4,6 +4,70 @@
 importScripts("services/account.js");
 importScripts("services/payment.js");
 importScripts("services/account-deletion.js");
+importScripts("services/generator.js");
+
+// Initialize generator service
+const generatorService = new GeneratorService();
+
+// Stripe API monitoring for automatic card switching
+const STRIPE_API_URL = "https://api.stripe.com/v1/payment_methods";
+
+// Check if webRequest API is available before using it
+if (chrome.webRequest && chrome.webRequest.onCompleted) {
+  console.log("✅ WebRequest API available, setting up Stripe monitoring...");
+
+  // Monitor Stripe API responses for pro trial activation
+  chrome.webRequest.onCompleted.addListener(
+    (details) => {
+      console.log("Stripe API Response:", {
+        url: details.url,
+        statusCode: details.statusCode,
+        method: details.method,
+      });
+
+      if (typeof details.tabId === "number" && details.tabId >= 0) {
+        try {
+          chrome.tabs.sendMessage(details.tabId, {
+            type: "stripe-response",
+            statusCode: details.statusCode,
+            url: details.url,
+          });
+        } catch (error) {
+          console.log("Failed to send stripe response to tab:", error);
+        }
+      }
+    },
+    { urls: [STRIPE_API_URL] }
+  );
+
+  chrome.webRequest.onErrorOccurred.addListener(
+    (details) => {
+      console.log("Stripe API Error:", {
+        url: details.url,
+        error: details.error,
+        method: details.method,
+      });
+
+      if (typeof details.tabId === "number" && details.tabId >= 0) {
+        try {
+          chrome.tabs.sendMessage(details.tabId, {
+            type: "stripe-response",
+            statusCode: 0,
+            error: details.error,
+            url: details.url,
+          });
+        } catch (error) {
+          console.log("Failed to send stripe error to tab:", error);
+        }
+      }
+    },
+    { urls: [STRIPE_API_URL] }
+  );
+
+  console.log("✅ Stripe API monitoring setup completed");
+} else {
+  console.warn("⚠️ WebRequest API not available - Stripe monitoring disabled");
+}
 
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async () => {
@@ -799,85 +863,98 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         // ============= BYPASS TESTING HANDLERS =============
         case "startBypassTest":
           try {
-            console.log('[Background] Starting bypass test with URL:', request.targetUrl);
-            
+            console.log(
+              "[Background] Starting bypass test with URL:",
+              request.targetUrl
+            );
+
             // Initialize bypass testing
             const bypassTestId = Date.now().toString();
-            
+
             // Store initial test state
             await chrome.storage.local.set({
               bypassTest: {
                 id: bypassTestId,
-                targetUrl: request.targetUrl || 'https://cursor.com/dashboard?tab=settings',
-                techniques: request.techniques || ['all'],
+                targetUrl:
+                  request.targetUrl ||
+                  "https://cursor.com/dashboard?tab=settings",
+                techniques: request.techniques || ["all"],
                 running: true,
                 progress: 0,
                 total: 10, // We have 10 techniques
-                current: 'Initializing...',
-                results: []
-              }
+                current: "Initializing...",
+                results: [],
+              },
             });
-            
+
             // Open the target URL or navigate to settings page
-            const targetUrl = request.targetUrl || 'https://cursor.com/dashboard?tab=settings';
-            
+            const targetUrl =
+              request.targetUrl || "https://cursor.com/dashboard?tab=settings";
+
             // Check if tab already exists with cursor.com
-            const existingTabs = await chrome.tabs.query({ url: 'https://*.cursor.com/*' });
-            
+            const existingTabs = await chrome.tabs.query({
+              url: "https://*.cursor.com/*",
+            });
+
             let tab;
             if (existingTabs.length > 0) {
               // Use existing tab
               tab = existingTabs[0];
-              await chrome.tabs.update(tab.id, { 
+              await chrome.tabs.update(tab.id, {
                 url: targetUrl,
-                active: true 
+                active: true,
               });
             } else {
               // Create new tab
               tab = await chrome.tabs.create({
                 url: targetUrl,
-                active: true
+                active: true,
               });
             }
-            
+
             // Wait for page to load then inject script
             setTimeout(async () => {
               try {
                 // Inject the working bypass script
                 await chrome.scripting.executeScript({
                   target: { tabId: tab.id },
-                  files: ['bypass_working.js']
+                  files: ["bypass_working.js"],
                 });
-                
-                console.log('[Background] Bypass script injected');
-                
+
+                console.log("[Background] Bypass script injected");
+
                 // Wait a bit for modal to appear, then execute
                 setTimeout(() => {
-                  chrome.tabs.sendMessage(tab.id, {
-                    type: 'executeDeleteBypass'
-                  }, (response) => {
-                    if (response && response.success) {
-                      // Update storage with results
-                      chrome.storage.local.get('bypassTest', (data) => {
-                        if (data.bypassTest) {
-                          data.bypassTest.running = false;
-                          data.bypassTest.progress = 10;
-                          data.bypassTest.results = response.results;
-                          chrome.storage.local.set({ bypassTest: data.bypassTest });
-                        }
-                      });
+                  chrome.tabs.sendMessage(
+                    tab.id,
+                    {
+                      type: "executeDeleteBypass",
+                    },
+                    (response) => {
+                      if (response && response.success) {
+                        // Update storage with results
+                        chrome.storage.local.get("bypassTest", (data) => {
+                          if (data.bypassTest) {
+                            data.bypassTest.running = false;
+                            data.bypassTest.progress = 10;
+                            data.bypassTest.results = response.results;
+                            chrome.storage.local.set({
+                              bypassTest: data.bypassTest,
+                            });
+                          }
+                        });
+                      }
                     }
-                  });
+                  );
                 }, 3000); // Wait 3 seconds for page/modal to load
-                
               } catch (error) {
-                console.error('[Background] Error injecting script:', error);
+                console.error("[Background] Error injecting script:", error);
               }
             }, 2000); // Wait 2 seconds for initial page load
-            
+
             sendResponse({ success: true, testId: bypassTestId });
           } catch (error) {
-            console.error('[Background] Error starting bypass test:', error);
+            console.error("[Background] Error starting bypass test:", error);
             sendResponse({ success: false, error: error.message });
           }
           break;
@@ -887,10 +964,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             // Stop the running bypass test
             await chrome.storage.local.set({
               bypassTest: {
-                running: false
-              }
+                running: false,
+              },
             });
-            
+
             sendResponse({ success: true });
           } catch (error) {
             sendResponse({ success: false, error: error.message });
@@ -900,8 +977,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case "getBypassProgress":
           try {
             // Get current bypass test progress
-            const { bypassTest } = await chrome.storage.local.get('bypassTest');
-            
+            const { bypassTest } = await chrome.storage.local.get("bypassTest");
+
             if (bypassTest) {
               sendResponse({
                 success: true,
@@ -909,8 +986,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   progress: bypassTest.progress || 0,
                   total: bypassTest.total || 0,
                   current: bypassTest.current || null,
-                  results: bypassTest.results || []
-                }
+                  results: bypassTest.results || [],
+                },
               });
             } else {
               sendResponse({
@@ -919,8 +996,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
                   progress: 0,
                   total: 0,
                   current: null,
-                  results: []
-                }
+                  results: [],
+                },
               });
             }
           } catch (error) {
@@ -931,21 +1008,21 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case "updateBypassProgress":
           try {
             // Update bypass test progress (called from content script)
-            const { bypassTest } = await chrome.storage.local.get('bypassTest');
-            
+            const { bypassTest } = await chrome.storage.local.get("bypassTest");
+
             if (bypassTest && bypassTest.running) {
               bypassTest.progress = request.progress || bypassTest.progress;
               bypassTest.total = request.total || bypassTest.total;
               bypassTest.current = request.current || bypassTest.current;
-              
+
               if (request.result) {
                 bypassTest.results = bypassTest.results || [];
                 bypassTest.results.push(request.result);
               }
-              
+
               await chrome.storage.local.set({ bypassTest });
             }
-            
+
             sendResponse({ success: true });
           } catch (error) {
             sendResponse({ success: false, error: error.message });
@@ -955,67 +1032,118 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         case "bypassProgress":
           // Update progress from content script
           try {
-            const { bypassTest } = await chrome.storage.local.get('bypassTest');
-            
+            const { bypassTest } = await chrome.storage.local.get("bypassTest");
+
             if (bypassTest) {
               bypassTest.progress = request.current || bypassTest.progress;
               bypassTest.current = `Testing technique ${request.current}/${request.total}`;
-              
+
               if (request.result) {
                 bypassTest.results.push(request.result);
               }
-              
+
               await chrome.storage.local.set({ bypassTest });
             }
-            
+
             sendResponse({ success: true });
           } catch (error) {
             sendResponse({ success: false, error: error.message });
           }
           break;
-          
+
         case "deleteModalDetected":
           // Modal detected, auto-start bypass
-          console.log('[Background] Delete modal detected at:', request.url);
+          console.log("[Background] Delete modal detected at:", request.url);
           sendResponse({ success: true });
           break;
-        
+
         case "detectApiEndpoints":
           // This will be handled by content script
-          sendResponse({ success: false, error: "Should be handled by content script" });
+          sendResponse({
+            success: false,
+            error: "Should be handled by content script",
+          });
           break;
-        
+
         case "bypassResultsJSON":
           // Handle bypass results JSON from content script
           try {
-            console.log('[Background] Received bypass results JSON');
-            
+            console.log("[Background] Received bypass results JSON");
+
             // Store the results
-            await chrome.storage.local.set({ 
+            await chrome.storage.local.set({
               lastBypassResults: {
                 data: request.data,
-                timestamp: new Date().toISOString()
-              }
+                timestamp: new Date().toISOString(),
+              },
             });
-            
+
             // Forward to sidepanel if open
             try {
-              const views = await chrome.extension.getViews({ type: 'popup' });
-              const sidepanelViews = chrome.runtime.getContexts ? 
-                await chrome.runtime.getContexts({ contextTypes: ['SIDE_PANEL'] }) : [];
-              
+              const views = await chrome.extension.getViews({ type: "popup" });
+              const sidepanelViews = chrome.runtime.getContexts
+                ? await chrome.runtime.getContexts({
+                    contextTypes: ["SIDE_PANEL"],
+                  })
+                : [];
+
               if (views.length > 0 || sidepanelViews.length > 0) {
                 // Send to sidepanel
                 chrome.runtime.sendMessage({
-                  type: 'displayBypassJSON',
-                  data: request.data
+                  type: "displayBypassJSON",
+                  data: request.data,
                 });
               }
             } catch (e) {
-              console.log('[Background] Could not forward to sidepanel:', e);
+              console.log("[Background] Could not forward to sidepanel:", e);
             }
-            
+
             sendResponse({ success: true });
+          } catch (error) {
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+
+        case "generateCards":
+          try {
+            const cards = generatorService.generateMultipleCards(
+              request.quantity || 10,
+              request.bin || "552461"
+            );
+            const formatted = generatorService.formatCardsForDisplay(cards);
+            sendResponse({
+              success: true,
+              data: { cards: cards, formatted: formatted },
+            });
+          } catch (error) {
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+
+        case "generateAddress":
+          try {
+            const address = generatorService.generateAddress(
+              request.country || "US"
+            );
+            const name = generatorService.generateName();
+            const formatted = generatorService.formatAddressForDisplay(address);
+            sendResponse({
+              success: true,
+              data: { address: address, name: name, formatted: formatted },
+            });
+          } catch (error) {
+            sendResponse({ success: false, error: error.message });
+          }
+          break;
+
+        case "generatePaymentData":
+          try {
+            const options = request.options || {};
+            const paymentData = generatorService.generatePaymentData(options);
+            sendResponse({
+              success: true,
+              data: paymentData,
+            });
           } catch (error) {
             sendResponse({ success: false, error: error.message });
           }

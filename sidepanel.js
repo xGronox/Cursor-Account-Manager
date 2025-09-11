@@ -20,24 +20,48 @@ class CursorAccountSidebar {
   }
 
   async init() {
-    // Load accounts and active account
-    await this.loadAccounts();
+    try {
+      console.log("🔥 CursorAccountSidebar initializing...");
 
-    // Setup event listeners
-    this.setupEventListeners();
-    
-    // Setup message listener for bypass results
-    this.setupMessageListener();
+      // Setup event listeners first
+      this.setupEventListeners();
+      console.log("✅ Event listeners setup completed");
 
-    // Update UI
-    this.updateUI();
+      // Setup message listener for bypass results
+      this.setupMessageListener();
+      console.log("✅ Message listener setup completed");
+
+      // Load accounts and active account
+      await this.loadAccounts();
+      console.log("✅ Accounts loaded");
+
+      // Update UI
+      this.updateUI();
+      console.log("✅ UI updated");
+
+      console.log(
+        "🎉 CursorAccountSidebar initialization completed successfully!"
+      );
+    } catch (error) {
+      console.error("❌ Error during initialization:", error);
+      // Still try to setup basic event listeners even if other parts fail
+      try {
+        this.setupEventListeners();
+        console.log("🔧 Basic event listeners setup as fallback");
+      } catch (setupError) {
+        console.error(
+          "❌ Critical error: Cannot setup event listeners:",
+          setupError
+        );
+      }
+    }
   }
-  
+
   setupMessageListener() {
     // Listen for messages from background script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-      if (request.type === 'displayBypassJSON' && request.data) {
-        console.log('Received bypass JSON results to display');
+      if (request.type === "displayBypassJSON" && request.data) {
+        console.log("Received bypass JSON results to display");
         this.displayBypassJSON(request.data);
         sendResponse({ success: true });
       }
@@ -46,21 +70,62 @@ class CursorAccountSidebar {
   }
 
   setupEventListeners() {
-    // Tab navigation
-    document.getElementById("accountsTab").addEventListener("click", () => {
-      this.switchTab("accounts");
+    console.log("🔧 Setting up event listeners...");
+
+    // Test if basic elements exist
+    const accountsTab = document.getElementById("accountsTab");
+    const paymentsTab = document.getElementById("paymentsTab");
+    const generatorTab = document.getElementById("generatorTab");
+    const bypassTab = document.getElementById("bypassTab");
+
+    console.log("Tab elements found:", {
+      accountsTab: !!accountsTab,
+      paymentsTab: !!paymentsTab,
+      generatorTab: !!generatorTab,
+      bypassTab: !!bypassTab,
     });
 
-    document.getElementById("paymentsTab").addEventListener("click", () => {
-      this.switchTab("payments");
-    });
+    // Tab navigation with error handling
+    if (accountsTab) {
+      accountsTab.addEventListener("click", () => {
+        console.log("Accounts tab clicked");
+        this.switchTab("accounts");
+      });
+      console.log("✅ Accounts tab listener added");
+    } else {
+      console.error("❌ Accounts tab not found");
+    }
+
+    if (paymentsTab) {
+      paymentsTab.addEventListener("click", () => {
+        console.log("Payments tab clicked");
+        this.switchTab("payments");
+      });
+      console.log("✅ Payments tab listener added");
+    } else {
+      console.error("❌ Payments tab not found");
+    }
+
+    // Generator tab navigation
+    if (generatorTab) {
+      generatorTab.addEventListener("click", () => {
+        console.log("Generator tab clicked");
+        this.switchTab("generator");
+      });
+      console.log("✅ Generator tab listener added");
+    } else {
+      console.error("❌ Generator tab not found");
+    }
 
     // NEW: Bypass tab navigation
-    const bypassTab = document.getElementById("bypassTab");
     if (bypassTab) {
       bypassTab.addEventListener("click", () => {
+        console.log("Bypass tab clicked");
         this.switchTab("bypass");
       });
+      console.log("✅ Bypass tab listener added");
+    } else {
+      console.error("❌ Bypass tab not found");
     }
 
     // Add account button
@@ -113,6 +178,29 @@ class CursorAccountSidebar {
         this.forceRefreshStatus();
       });
 
+    // Generator tab buttons
+    const generateCardsBtn = document.getElementById("generateCardsBtn");
+    if (generateCardsBtn) {
+      generateCardsBtn.addEventListener("click", () => this.generateCards());
+    }
+
+    const generateAddressBtn = document.getElementById("generateAddressBtn");
+    if (generateAddressBtn) {
+      generateAddressBtn.addEventListener("click", () =>
+        this.generateAddress()
+      );
+    }
+
+    const activateProTrialBtn = document.getElementById("activateProTrialBtn");
+    if (activateProTrialBtn) {
+      activateProTrialBtn.addEventListener("click", () =>
+        this.activateProTrialWithDebounce()
+      );
+    }
+
+    // Initialize BIN history
+    this.initBinHistory();
+
     // Consolidate duplicates button
     document
       .getElementById("consolidateDuplicatesBtn")
@@ -146,12 +234,12 @@ class CursorAccountSidebar {
 
     // NEW: Bypass Testing Event Listeners
     this.setupBypassEventListeners();
-    
+
     // Initialize Bypass Settings Manager
     if (window.BypassSettingsManager) {
       this.bypassSettings = new window.BypassSettingsManager();
     }
-    
+
     // Initialize Bypass Testing Handler
     if (window.BypassTestingHandler) {
       this.bypassHandler = new window.BypassTestingHandler();
@@ -338,17 +426,24 @@ class CursorAccountSidebar {
 
   async loadAccounts() {
     try {
+      console.log("📡 Loading accounts...");
       this.showLoading(true);
 
       // Check if background script is ready
+      console.log("🔍 Checking background script...");
       const ping = await chrome.runtime
         .sendMessage({ type: "ping" })
-        .catch(() => null);
+        .catch((error) => {
+          console.error("Background script ping failed:", error);
+          return null;
+        });
+
       if (!ping) {
-        console.error("Background script not responding");
+        console.error("❌ Background script not responding, retrying...");
         setTimeout(() => this.loadAccounts(), 500);
         return;
       }
+      console.log("✅ Background script is responding");
 
       // Get accounts from background
       const response = await chrome.runtime.sendMessage({
@@ -376,12 +471,43 @@ class CursorAccountSidebar {
         this.updateUI();
       }
     } catch (error) {
-      console.error("Error loading accounts:", error);
-      this.showNotification("Extension error", "error");
+      console.error("❌ Error loading accounts:", error);
+      this.showNotification(
+        "Extension error - Working in offline mode",
+        "warning"
+      );
       this.accounts = [];
-      this.updateUI();
+      // Still try to update UI in case of error
+      try {
+        this.updateUI();
+      } catch (uiError) {
+        console.error("❌ Error updating UI:", uiError);
+        // Fallback to basic UI
+        this.updateBasicUI();
+      }
     } finally {
       this.showLoading(false);
+    }
+  }
+
+  // Fallback basic UI update
+  updateBasicUI() {
+    try {
+      console.log("🔧 Updating basic UI...");
+      const accountsList = document.getElementById("accountsList");
+      if (accountsList) {
+        accountsList.innerHTML =
+          '<div class="empty-state">Extension loading...</div>';
+      }
+
+      const accountsCount = document.getElementById("accountsCount");
+      if (accountsCount) {
+        accountsCount.textContent = "(0)";
+      }
+
+      console.log("✅ Basic UI updated");
+    } catch (error) {
+      console.error("❌ Error in basic UI update:", error);
     }
   }
 
@@ -2014,7 +2140,7 @@ Choose NO if you want to keep the backup file.`
   }
 
   // ============= BYPASS TESTING FUNCTIONALITY =============
-  
+
   setupBypassEventListeners() {
     // Detect URL button
     const detectUrlBtn = document.getElementById("bypassDetectUrl");
@@ -2029,9 +2155,11 @@ Choose NO if you want to keep the backup file.`
     }
 
     // Technique checkboxes
-    document.querySelectorAll('.technique-item input[type="checkbox"]').forEach(checkbox => {
-      checkbox.addEventListener("change", () => this.updateTestCount());
-    });
+    document
+      .querySelectorAll('.technique-item input[type="checkbox"]')
+      .forEach((checkbox) => {
+        checkbox.addEventListener("change", () => this.updateTestCount());
+      });
 
     // Start testing button
     const startBtn = document.getElementById("startBypassTest");
@@ -2050,13 +2178,13 @@ Choose NO if you want to keep the backup file.`
     if (exportBtn) {
       exportBtn.addEventListener("click", () => this.exportBypassResults());
     }
-    
+
     // View results button
     const viewResultsBtn = document.getElementById("viewBypassResults");
     if (viewResultsBtn) {
       viewResultsBtn.addEventListener("click", () => this.viewBypassResults());
     }
-    
+
     // Open console button
     const consoleBtn = document.getElementById("openBypassConsole");
     if (consoleBtn) {
@@ -2073,29 +2201,41 @@ Choose NO if you want to keep the backup file.`
   async detectCurrentUrl() {
     try {
       // Get active tab
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+
       if (tab && tab.url) {
         // Check if it's a Cursor API endpoint
-        if (tab.url.includes('cursor.com') || tab.url.includes('cursor.sh')) {
+        if (tab.url.includes("cursor.com") || tab.url.includes("cursor.sh")) {
           document.getElementById("bypassTargetUrl").value = tab.url;
           this.showNotification("URL detected from current tab", "success");
         } else {
           // If not on cursor.com, try to use a default endpoint
-          const defaultEndpoint = "https://cursor.com/api/dashboard/delete-account";
+          const defaultEndpoint =
+            "https://cursor.com/api/dashboard/delete-account";
           document.getElementById("bypassTargetUrl").value = defaultEndpoint;
           this.showNotification("Using default Cursor API endpoint", "info");
-          
+
           // Only try to send message if we're on a regular http/https page
-          if (tab.url.startsWith('http://') || tab.url.startsWith('https://')) {
+          if (tab.url.startsWith("http://") || tab.url.startsWith("https://")) {
             try {
               const response = await chrome.tabs.sendMessage(tab.id, {
-                type: "detectApiEndpoints"
+                type: "detectApiEndpoints",
               });
-              
-              if (response && response.endpoints && response.endpoints.length > 0) {
-                document.getElementById("bypassTargetUrl").value = response.endpoints[0];
-                this.showNotification(`Found ${response.endpoints.length} API endpoints`, "success");
+
+              if (
+                response &&
+                response.endpoints &&
+                response.endpoints.length > 0
+              ) {
+                document.getElementById("bypassTargetUrl").value =
+                  response.endpoints[0];
+                this.showNotification(
+                  `Found ${response.endpoints.length} API endpoints`,
+                  "success"
+                );
               }
             } catch (msgError) {
               // Ignore message error, use default endpoint
@@ -2105,7 +2245,8 @@ Choose NO if you want to keep the backup file.`
         }
       } else {
         // Use default endpoint if no tab available
-        const defaultEndpoint = "https://cursor.com/api/dashboard/delete-account";
+        const defaultEndpoint =
+          "https://cursor.com/api/dashboard/delete-account";
         document.getElementById("bypassTargetUrl").value = defaultEndpoint;
         this.showNotification("Using default Cursor API endpoint", "info");
       }
@@ -2119,20 +2260,24 @@ Choose NO if you want to keep the backup file.`
   }
 
   selectAllTechniques() {
-    const checkboxes = document.querySelectorAll('.technique-item input[type="checkbox"]');
-    const allChecked = Array.from(checkboxes).every(cb => cb.checked);
-    
-    checkboxes.forEach(checkbox => {
+    const checkboxes = document.querySelectorAll(
+      '.technique-item input[type="checkbox"]'
+    );
+    const allChecked = Array.from(checkboxes).every((cb) => cb.checked);
+
+    checkboxes.forEach((checkbox) => {
       checkbox.checked = !allChecked;
     });
-    
+
     this.updateTestCount();
   }
 
   updateTestCount() {
-    const checkboxes = document.querySelectorAll('.technique-item input[type="checkbox"]:checked');
-    const techniques = Array.from(checkboxes).map(cb => cb.dataset.technique);
-    
+    const checkboxes = document.querySelectorAll(
+      '.technique-item input[type="checkbox"]:checked'
+    );
+    const techniques = Array.from(checkboxes).map((cb) => cb.dataset.technique);
+
     // Calculate total tests based on selected techniques
     const testCounts = {
       parameter: 15,
@@ -2144,14 +2289,14 @@ Choose NO if you want to keep the backup file.`
       frontend: 5,
       race: 10,
       encoding: 9,
-      endpoint: 7
+      endpoint: 7,
     };
-    
+
     let totalTests = 0;
-    techniques.forEach(tech => {
+    techniques.forEach((tech) => {
       totalTests += testCounts[tech] || 0;
     });
-    
+
     const totalTestsEl = document.getElementById("bypassTotalTests");
     if (totalTestsEl) {
       totalTestsEl.textContent = `${totalTests} tests selected`;
@@ -2160,30 +2305,34 @@ Choose NO if you want to keep the backup file.`
 
   async startBypassTesting() {
     const targetUrl = document.getElementById("bypassTargetUrl").value.trim();
-    
+
     if (!targetUrl) {
       this.showNotification("Please enter a target URL", "warning");
       return;
     }
-    
+
     // Get selected techniques
-    const checkboxes = document.querySelectorAll('.technique-item input[type="checkbox"]:checked');
-    const techniques = Array.from(checkboxes).map(cb => cb.dataset.technique);
-    
+    const checkboxes = document.querySelectorAll(
+      '.technique-item input[type="checkbox"]:checked'
+    );
+    const techniques = Array.from(checkboxes).map((cb) => cb.dataset.technique);
+
     if (techniques.length === 0) {
       this.showNotification("Please select at least one technique", "warning");
       return;
     }
-    
+
     // Update UI
     document.getElementById("startBypassTest").disabled = true;
     document.getElementById("stopBypassTest").disabled = false;
     document.getElementById("bypassProgressSection").style.display = "block";
     document.getElementById("bypassResultsSection").style.display = "none";
-    
+
     // Get settings from bypass settings manager
-    const settings = this.bypassSettings ? this.bypassSettings.getSettings() : {};
-    
+    const settings = this.bypassSettings
+      ? this.bypassSettings.getSettings()
+      : {};
+
     // Use the bypass handler to start testing
     if (this.bypassHandler) {
       await this.bypassHandler.startTest(targetUrl, techniques, settings);
@@ -2196,26 +2345,29 @@ Choose NO if you want to keep the backup file.`
 
   async monitorBypassProgress() {
     if (!this.bypassTestRunning) return;
-    
+
     try {
       const response = await chrome.runtime.sendMessage({
-        type: "getBypassProgress"
+        type: "getBypassProgress",
       });
-      
+
       if (response.success) {
         const { progress, total, current, results } = response.data;
-        
+
         // Update progress bar
         const progressPercent = (progress / total) * 100;
-        document.getElementById("bypassProgressFill").style.width = `${progressPercent}%`;
-        document.getElementById("bypassProgressText").textContent = 
-          `Testing ${current || "..."}... (${progress}/${total})`;
-        
+        document.getElementById(
+          "bypassProgressFill"
+        ).style.width = `${progressPercent}%`;
+        document.getElementById("bypassProgressText").textContent = `Testing ${
+          current || "..."
+        }... (${progress}/${total})`;
+
         // Store results
         if (results) {
           this.bypassTestResults = results;
         }
-        
+
         // Check if completed
         if (progress >= total) {
           this.completeBypassTesting();
@@ -2231,16 +2383,16 @@ Choose NO if you want to keep the backup file.`
 
   completeBypassTesting() {
     this.bypassTestRunning = false;
-    
+
     // Update UI
     document.getElementById("startBypassTest").disabled = false;
     document.getElementById("stopBypassTest").disabled = true;
     document.getElementById("bypassProgressSection").style.display = "none";
     document.getElementById("bypassResultsSection").style.display = "block";
-    
+
     // Display results
     this.displayBypassResults();
-    
+
     this.showNotification("Bypass testing completed!", "success");
   }
 
@@ -2254,42 +2406,52 @@ Choose NO if you want to keep the backup file.`
 
   displayBypassResults() {
     if (!this.bypassTestResults || this.bypassTestResults.length === 0) {
-      document.getElementById("bypassResultDetails").innerHTML = 
+      document.getElementById("bypassResultDetails").innerHTML =
         '<div class="empty-state">No results to display</div>';
       return;
     }
-    
+
     // Count results by status
     let successCount = 0;
     let partialCount = 0;
     let failedCount = 0;
-    
-    this.bypassTestResults.forEach(result => {
+
+    this.bypassTestResults.forEach((result) => {
       if (result.status === "success") successCount++;
       else if (result.status === "partial") partialCount++;
       else failedCount++;
     });
-    
+
     // Update summary
     document.getElementById("bypassSuccessCount").textContent = successCount;
     document.getElementById("bypassPartialCount").textContent = partialCount;
     document.getElementById("bypassFailedCount").textContent = failedCount;
-    
+
     // Display detailed results
     const detailsHtml = this.bypassTestResults
-      .filter(result => result.status !== "failed") // Only show successful/partial
-      .map(result => `
+      .filter((result) => result.status !== "failed") // Only show successful/partial
+      .map(
+        (result) => `
         <div class="result-item ${result.status}">
           <div class="result-header">
             <span class="result-technique">${result.technique}</span>
             <span class="result-status">${result.status}</span>
           </div>
           <div class="result-description">${result.description}</div>
-          ${result.payload ? `<div class="result-payload"><code>${this.escapeHtml(result.payload)}</code></div>` : ''}
+          ${
+            result.payload
+              ? `<div class="result-payload"><code>${this.escapeHtml(
+                  result.payload
+                )}</code></div>`
+              : ""
+          }
         </div>
-      `).join('');
-    
-    document.getElementById("bypassResultDetails").innerHTML = detailsHtml || 
+      `
+      )
+      .join("");
+
+    document.getElementById("bypassResultDetails").innerHTML =
+      detailsHtml ||
       '<div class="empty-state">No successful bypasses found</div>';
   }
 
@@ -2306,24 +2468,28 @@ Choose NO if you want to keep the backup file.`
     document.getElementById("stopBypassTest").disabled = true;
     document.getElementById("bypassProgressSection").style.display = "none";
     document.getElementById("bypassProgressFill").style.width = "0%";
-    document.getElementById("bypassProgressText").textContent = "Initializing...";
+    document.getElementById("bypassProgressText").textContent =
+      "Initializing...";
   }
-  
+
   // View bypass results
   viewBypassResults() {
     const resultsSection = document.getElementById("bypassResultsSection");
-    
+
     if (resultsSection.style.display === "none") {
       // Show results if hidden
       if (this.bypassTestResults && this.bypassTestResults.length > 0) {
         resultsSection.style.display = "block";
         this.displayBypassResults();
         this.showNotification("Showing test results", "info");
-        
+
         // Scroll to results
-        resultsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        resultsSection.scrollIntoView({ behavior: "smooth", block: "nearest" });
       } else {
-        this.showNotification("No test results available. Run a test first!", "warning");
+        this.showNotification(
+          "No test results available. Run a test first!",
+          "warning"
+        );
       }
     } else {
       // Hide results if visible
@@ -2331,39 +2497,43 @@ Choose NO if you want to keep the backup file.`
       this.showNotification("Results hidden", "info");
     }
   }
-  
+
   // Open bypass console - Using advanced console service
   async openBypassConsole() {
     // Load console service if not loaded
     if (!window.consoleService) {
-      const script = document.createElement('script');
-      script.src = chrome.runtime.getURL('services/console-service.js');
+      const script = document.createElement("script");
+      script.src = chrome.runtime.getURL("services/console-service.js");
       document.head.appendChild(script);
-      
+
       // Wait for script to load
-      await new Promise(resolve => {
+      await new Promise((resolve) => {
         script.onload = resolve;
         setTimeout(resolve, 1000); // Fallback timeout
       });
     }
-    
+
     // Create or toggle console
     if (window.consoleService) {
       const console = window.consoleService.createConsoleUI();
-      
+
       if (!console) {
         // Console was already open and got closed
-        this.showNotification('Console closed', 'info');
+        this.showNotification("Console closed", "info");
       } else {
         // Console opened
-        window.consoleService.captureLog('success', ['Advanced console initialized']);
-        window.consoleService.captureLog('info', ['Type :help for available commands']);
-        
+        window.consoleService.captureLog("success", [
+          "Advanced console initialized",
+        ]);
+        window.consoleService.captureLog("info", [
+          "Type :help for available commands",
+        ]);
+
         // Log current context
-        window.consoleService.captureLog('system', [
+        window.consoleService.captureLog("system", [
           `Context: ${this.currentTab} tab`,
-          `Active account: ${this.activeAccount?.name || 'None'}`,
-          `URL: ${window.location.href}`
+          `Active account: ${this.activeAccount?.name || "None"}`,
+          `URL: ${window.location.href}`,
         ]);
       }
     } else {
@@ -2371,12 +2541,12 @@ Choose NO if you want to keep the backup file.`
       this.openSimpleConsole();
     }
   }
-  
+
   // Fallback simple console
   openSimpleConsole() {
     // Create or show console panel
     let consolePanel = document.getElementById("bypassConsole");
-    
+
     if (!consolePanel) {
       // Create console panel if it doesn't exist
       consolePanel = document.createElement("div");
@@ -2393,7 +2563,7 @@ Choose NO if you want to keep the backup file.`
         flex-direction: column;
         z-index: 9999;
       `;
-      
+
       consolePanel.innerHTML = `
         <div style="padding: 10px; background: #1e293b; display: flex; justify-content: space-between; align-items: center;">
           <h3 style="margin: 0; color: white; font-size: 14px;">🖥️ Bypass Console</h3>
@@ -2416,19 +2586,22 @@ Choose NO if you want to keep the backup file.`
           />
         </div>
       `;
-      
+
       document.body.appendChild(consolePanel);
-      
+
       // Store reference for command execution
       window.cursorSidebar = this;
-      
-      this.logToConsole("Console opened. Type 'help' for available commands.", "info");
+
+      this.logToConsole(
+        "Console opened. Type 'help' for available commands.",
+        "info"
+      );
     } else {
       // Remove console if it exists
       consolePanel.remove();
     }
   }
-  
+
   // Log to bypass console
   logToConsole(message, type = "log") {
     const output = document.getElementById("bypassConsoleOutput");
@@ -2438,9 +2611,9 @@ Choose NO if you want to keep the backup file.`
         info: "#3b82f6",
         success: "#10b981",
         warning: "#f59e0b",
-        error: "#ef4444"
+        error: "#ef4444",
       };
-      
+
       const timestamp = new Date().toLocaleTimeString();
       const logEntry = document.createElement("div");
       logEntry.style.color = colors[type] || colors.log;
@@ -2449,16 +2622,17 @@ Choose NO if you want to keep the backup file.`
       output.scrollTop = output.scrollHeight;
     }
   }
-  
+
   // Execute bypass console command
   executeBypassCommand(command) {
     this.logToConsole(`> ${command}`, "info");
-    
+
     const cmd = command.toLowerCase().trim();
-    
-    switch(cmd) {
-      case 'help':
-        this.logToConsole(`
+
+    switch (cmd) {
+      case "help":
+        this.logToConsole(
+          `
 Available commands:
   start - Start bypass testing
   stop - Stop bypass testing
@@ -2467,40 +2641,52 @@ Available commands:
   export - Export results to file
   techniques - List available techniques
   status - Show current status
-`, "success");
+`,
+          "success"
+        );
         break;
-        
-      case 'start':
+
+      case "start":
         this.startBypassTesting();
         break;
-        
-      case 'stop':
+
+      case "stop":
         this.stopBypassTesting();
         break;
-        
-      case 'clear':
+
+      case "clear":
         const output = document.getElementById("bypassConsoleOutput");
-        if (output) output.innerHTML = '';
+        if (output) output.innerHTML = "";
         this.logToConsole("Console cleared", "info");
         break;
-        
-      case 'results':
+
+      case "results":
         if (this.bypassTestResults && this.bypassTestResults.length > 0) {
-          const success = this.bypassTestResults.filter(r => r.status === "success").length;
-          const partial = this.bypassTestResults.filter(r => r.status === "partial").length;
-          const failed = this.bypassTestResults.filter(r => r.status === "failed").length;
-          this.logToConsole(`Results: ${success} successful, ${partial} partial, ${failed} failed`, "success");
+          const success = this.bypassTestResults.filter(
+            (r) => r.status === "success"
+          ).length;
+          const partial = this.bypassTestResults.filter(
+            (r) => r.status === "partial"
+          ).length;
+          const failed = this.bypassTestResults.filter(
+            (r) => r.status === "failed"
+          ).length;
+          this.logToConsole(
+            `Results: ${success} successful, ${partial} partial, ${failed} failed`,
+            "success"
+          );
         } else {
           this.logToConsole("No results available", "warning");
         }
         break;
-        
-      case 'export':
+
+      case "export":
         this.exportBypassResults();
         break;
-        
-      case 'techniques':
-        this.logToConsole(`
+
+      case "techniques":
+        this.logToConsole(
+          `
 Available techniques:
   • Parameter Injection (15 tests)
   • Header Manipulation (15 tests)
@@ -2512,18 +2698,26 @@ Available techniques:
   • Race Condition (10 tests)
   • Encoding Bypass (9 tests)
   • Alternative Endpoints (7 tests)
-`, "success");
+`,
+          "success"
+        );
         break;
-        
-      case 'status':
+
+      case "status":
         const running = this.bypassTestRunning ? "Running" : "Idle";
         const progress = this.bypassTestProgress || 0;
         const total = this.bypassTestTotal || 0;
-        this.logToConsole(`Status: ${running}, Progress: ${progress}/${total}`, "info");
+        this.logToConsole(
+          `Status: ${running}, Progress: ${progress}/${total}`,
+          "info"
+        );
         break;
-        
+
       default:
-        this.logToConsole(`Unknown command: ${command}. Type 'help' for available commands.`, "error");
+        this.logToConsole(
+          `Unknown command: ${command}. Type 'help' for available commands.`,
+          "error"
+        );
     }
   }
 
@@ -2532,12 +2726,12 @@ Available techniques:
     div.textContent = text;
     return div.innerHTML;
   }
-  
+
   // Handle bypass results JSON
   displayBypassJSON(jsonData) {
     // Create results display modal
-    const modal = document.createElement('div');
-    modal.id = 'bypassResultsModal';
+    const modal = document.createElement("div");
+    modal.id = "bypassResultsModal";
     modal.style.cssText = `
       position: fixed;
       top: 50%;
@@ -2554,10 +2748,10 @@ Available techniques:
       display: flex;
       flex-direction: column;
     `;
-    
+
     const jsonString = JSON.stringify(jsonData, null, 2);
-    const successRate = jsonData.summary ? jsonData.summary.success_rate : '0%';
-    
+    const successRate = jsonData.summary ? jsonData.summary.success_rate : "0%";
+
     modal.innerHTML = `
       <div style="
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -2680,12 +2874,12 @@ Available techniques:
         </button>
       </div>
     `;
-    
+
     document.body.appendChild(modal);
-    
+
     // Add backdrop
-    const backdrop = document.createElement('div');
-    backdrop.id = 'bypassResultsBackdrop';
+    const backdrop = document.createElement("div");
+    backdrop.id = "bypassResultsBackdrop";
     backdrop.style.cssText = `
       position: fixed;
       top: 0;
@@ -2696,55 +2890,448 @@ Available techniques:
       z-index: 9999;
     `;
     document.body.appendChild(backdrop);
-    
+
     // Event listeners
-    document.getElementById('closeResultsModal').onclick = () => {
+    document.getElementById("closeResultsModal").onclick = () => {
       modal.remove();
       backdrop.remove();
     };
-    
+
     backdrop.onclick = () => {
       modal.remove();
       backdrop.remove();
     };
-    
+
     // Copy JSON button
-    document.getElementById('copyJSONBtn').onclick = async () => {
+    document.getElementById("copyJSONBtn").onclick = async () => {
       try {
         await navigator.clipboard.writeText(jsonString);
-        const btn = document.getElementById('copyJSONBtn');
+        const btn = document.getElementById("copyJSONBtn");
         const originalText = btn.innerHTML;
-        btn.innerHTML = '✅ Copied!';
-        btn.style.background = '#10b981';
-        
+        btn.innerHTML = "✅ Copied!";
+        btn.style.background = "#10b981";
+
         setTimeout(() => {
           btn.innerHTML = originalText;
-          btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+          btn.style.background =
+            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
         }, 2000);
       } catch (error) {
-        console.error('Failed to copy:', error);
-        this.showNotification('Failed to copy to clipboard', 'error');
+        console.error("Failed to copy:", error);
+        this.showNotification("Failed to copy to clipboard", "error");
       }
     };
-    
+
     // Download JSON button
-    document.getElementById('downloadJSONBtn').onclick = () => {
-      const blob = new Blob([jsonString], { type: 'application/json' });
+    document.getElementById("downloadJSONBtn").onclick = () => {
+      const blob = new Blob([jsonString], { type: "application/json" });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
-      a.download = `bypass_results_${new Date().toISOString().replace(/[:.]/g, '-')}.json`;
+      a.download = `bypass_results_${new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")}.json`;
       a.click();
       URL.revokeObjectURL(url);
-      
-      const btn = document.getElementById('downloadJSONBtn');
+
+      const btn = document.getElementById("downloadJSONBtn");
       const originalText = btn.innerHTML;
-      btn.innerHTML = '✅ Downloaded!';
-      
+      btn.innerHTML = "✅ Downloaded!";
+
       setTimeout(() => {
         btn.innerHTML = originalText;
       }, 2000);
     };
+  }
+
+  // === GENERATOR FUNCTIONS ===
+
+  // Generate Cards
+  async generateCards() {
+    try {
+      const binInput = document.getElementById("binInput").value.trim();
+      const quantity =
+        parseInt(document.getElementById("cardQuantity").value) || 10;
+
+      // Save BIN to history if it's provided and valid
+      if (binInput && binInput.length >= 6) {
+        this.addBinToHistory(binInput);
+      }
+
+      const response = await chrome.runtime.sendMessage({
+        type: "generateCards",
+        bin: binInput,
+        quantity: quantity,
+      });
+
+      if (response && response.success) {
+        const output = document.getElementById("cardOutput");
+        if (output) {
+          output.value = response.data.formatted;
+          this.showNotification(`✅ Generated ${quantity} cards`, "success");
+        }
+      } else {
+        this.showNotification("❌ Failed to generate cards", "error");
+      }
+    } catch (error) {
+      console.error("Error generating cards:", error);
+      this.showNotification("❌ Error generating cards", "error");
+    }
+  }
+
+  async generateAddress() {
+    try {
+      const countrySelect = document.getElementById("countrySelect");
+      const country = countrySelect ? countrySelect.value : "US";
+
+      const response = await chrome.runtime.sendMessage({
+        type: "generateAddress",
+        country: country,
+      });
+
+      if (response && response.success) {
+        const output = document.getElementById("personalOutput");
+        if (output) {
+          const formatted = `Name: ${response.data.name}\n${response.data.formatted}`;
+          output.value = formatted;
+          this.showNotification("✅ Address generated", "success");
+        }
+      } else {
+        this.showNotification("❌ Failed to generate address", "error");
+      }
+    } catch (error) {
+      console.error("Error generating address:", error);
+      this.showNotification("❌ Error generating address", "error");
+    }
+  }
+
+  // === PRO TRIAL ACTIVATION ===
+
+  activateProTrialWithDebounce() {
+    if (this.isActivatingTrial) {
+      console.log(
+        "⚠️ Pro Trial activation already in progress, ignoring click"
+      );
+      return;
+    }
+
+    this.isActivatingTrial = true;
+    setTimeout(() => {
+      this.isActivatingTrial = false;
+    }, 5000);
+
+    this.activateProTrial();
+  }
+
+  async activateProTrial() {
+    try {
+      this.showNotification("🚀 Activating Pro Trial...", "info");
+
+      // Generate cards for trial activation
+      const cards = await this.generateCardsForTrial();
+      if (!cards || cards.length === 0) {
+        this.showNotification("❌ Failed to generate cards", "error");
+        this.isActivatingTrial = false;
+        return;
+      }
+
+      // Get current tab
+      const [tab] = await chrome.tabs.query({
+        active: true,
+        currentWindow: true,
+      });
+      if (!tab) {
+        this.showNotification("❌ No active tab found", "error");
+        this.isActivatingTrial = false;
+        return;
+      }
+
+      // Try activation on current tab
+      await this.tryActivateOnCurrentTab(tab, cards);
+    } catch (error) {
+      console.error("Pro Trial activation error:", error);
+      this.showNotification(`❌ Activation failed: ${error.message}`, "error");
+      this.isActivatingTrial = false;
+    }
+  }
+
+  async generateCardsForTrial() {
+    try {
+      const binInput = document.getElementById("binInput");
+      const cardQuantity = document.getElementById("cardQuantity");
+
+      const bin = binInput ? binInput.value.trim() || "552461" : "552461";
+      const quantity = cardQuantity ? parseInt(cardQuantity.value) || 5 : 5;
+
+      const response = await chrome.runtime.sendMessage({
+        type: "generateCards",
+        bin: bin,
+        quantity: quantity,
+      });
+
+      if (response && response.success) {
+        console.log(`✅ Generated ${quantity} cards for trial activation`);
+        return response.data.cards;
+      } else {
+        console.error("❌ Failed to generate cards for trial");
+        return null;
+      }
+    } catch (error) {
+      console.error("Error generating cards for trial:", error);
+      return null;
+    }
+  }
+
+  async tryActivateOnCurrentTab(tab, cards) {
+    if (!tab.url.includes("cursor.com")) {
+      await this.tryDifferentPages(tab, cards);
+      return;
+    }
+
+    chrome.tabs.sendMessage(
+      tab.id,
+      {
+        type: "activateProTrial",
+      },
+      async (response) => {
+        if (chrome.runtime.lastError) {
+          console.log("Content script not ready, reloading tab...");
+          await chrome.tabs.reload(tab.id);
+          setTimeout(() => this.tryActivateOnCurrentTab(tab, cards), 3000);
+          return;
+        }
+
+        if (response && response.success) {
+          this.showNotification(
+            "🎯 Pro Trial activation initiated!",
+            "success"
+          );
+        } else {
+          await this.tryDifferentPages(tab, cards);
+        }
+      }
+    );
+  }
+
+  async tryDifferentPages(tab, cards) {
+    const pages = [
+      "https://cursor.com",
+      "https://cursor.com/dashboard",
+      "https://cursor.com/trial",
+    ];
+
+    for (const url of pages) {
+      try {
+        console.log(`🔄 Trying ${url}...`);
+        await chrome.tabs.update(tab.id, { url: url });
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+
+        const success = await this.tryActivateWithCards(tab.id, cards);
+        if (success) {
+          this.showNotification("✅ Pro Trial activation started!", "success");
+          this.isActivatingTrial = false;
+          return;
+        }
+      } catch (error) {
+        console.log(`❌ Failed on ${url}:`, error);
+        continue;
+      }
+    }
+
+    this.showNotification(
+      "❌ Could not activate trial. Please try manually on cursor.com",
+      "error"
+    );
+    this.isActivatingTrial = false;
+  }
+
+  async tryActivateWithCards(tabId, cards) {
+    return new Promise((resolve) => {
+      chrome.tabs.sendMessage(
+        tabId,
+        {
+          type: "activateProTrial",
+        },
+        (response) => {
+          if (response && response.success) {
+            this.showNotification(
+              "🎯 Found trial button! Waiting for Stripe redirect...",
+              "info"
+            );
+
+            setTimeout(() => {
+              chrome.tabs.sendMessage(
+                tabId,
+                {
+                  type: "startProTrialActivation",
+                  cards: cards,
+                },
+                (activationResponse) => {
+                  if (activationResponse && activationResponse.success) {
+                    this.showNotification(
+                      "🚀 Trial activation with cards started!",
+                      "success"
+                    );
+                  }
+                }
+              );
+            }, 2000);
+
+            resolve(true);
+          } else {
+            resolve(false);
+          }
+        }
+      );
+    });
+  }
+
+  // === BIN HISTORY MANAGEMENT ===
+
+  initBinHistory() {
+    const binInput = document.getElementById("binInput");
+    if (!binInput) return;
+
+    binInput.addEventListener("focus", () => {
+      this.showBinHistory();
+    });
+
+    binInput.addEventListener("blur", () => {
+      setTimeout(() => {
+        this.hideBinHistory();
+      }, 200);
+    });
+
+    this.loadBinHistory();
+  }
+
+  getBinHistory() {
+    const stored = localStorage.getItem("cursor_bin_history");
+    if (stored) {
+      try {
+        return JSON.parse(stored);
+      } catch (e) {
+        return [];
+      }
+    }
+    return [];
+  }
+
+  saveBinHistory(history) {
+    localStorage.setItem("cursor_bin_history", JSON.stringify(history));
+  }
+
+  addBinToHistory(binCode) {
+    if (!binCode || binCode.length < 6) return;
+
+    let history = this.getBinHistory();
+
+    history = history.filter((item) => item.bin !== binCode);
+
+    const binInfo = this.getBinInfo(binCode);
+    history.unshift({
+      bin: binCode,
+      ...binInfo,
+      lastUsed: new Date().toISOString(),
+    });
+
+    history = history.slice(0, 10);
+
+    this.saveBinHistory(history);
+  }
+
+  getBinInfo(bin) {
+    const cleanBin = bin.replace(/[x\s]/gi, "");
+
+    if (/^4/.test(cleanBin))
+      return { type: "Visa", description: "Visa Credit Card" };
+    if (/^5[1-5]/.test(cleanBin) || /^2[2-7]/.test(cleanBin))
+      return { type: "MasterCard", description: "MasterCard Credit Card" };
+    if (/^3[47]/.test(cleanBin))
+      return { type: "American Express", description: "Amex Credit Card" };
+    if (/^6(?:011|5)/.test(cleanBin))
+      return { type: "Discover", description: "Discover Credit Card" };
+    if (/^3[0689]/.test(cleanBin))
+      return { type: "Diners Club", description: "Diners Club Card" };
+    if (/^35/.test(cleanBin))
+      return { type: "JCB", description: "JCB Credit Card" };
+
+    return { type: "Unknown", description: "Unknown Card Type" };
+  }
+
+  loadBinHistory() {
+    this.renderBinHistory();
+  }
+
+  showBinHistory() {
+    const dropdown = document.getElementById("binHistoryDropdown");
+    if (dropdown) {
+      this.renderBinHistory();
+      dropdown.style.display = "block";
+    }
+  }
+
+  hideBinHistory() {
+    const dropdown = document.getElementById("binHistoryDropdown");
+    if (dropdown) {
+      dropdown.style.display = "none";
+    }
+  }
+
+  renderBinHistory() {
+    const dropdown = document.getElementById("binHistoryDropdown");
+    if (!dropdown) return;
+
+    const history = this.getBinHistory();
+
+    if (history.length === 0) {
+      dropdown.innerHTML =
+        '<div class="bin-history-empty">No BIN history</div>';
+      return;
+    }
+
+    dropdown.innerHTML = history
+      .map(
+        (item) => `
+      <div class="bin-history-item" onclick="sidebar.selectBinFromHistory('${
+        item.bin
+      }')">
+        <div>
+          <div class="bin-code">${item.bin}</div>
+          <div class="bin-desc">${item.type} - ${this.formatDate(
+          item.lastUsed
+        )}</div>
+        </div>
+        <button class="remove-bin" onclick="event.stopPropagation(); sidebar.removeBinFromHistory('${
+          item.bin
+        }')" title="Remove">×</button>
+      </div>
+    `
+      )
+      .join("");
+  }
+
+  selectBinFromHistory(bin) {
+    const binInput = document.getElementById("binInput");
+    if (binInput) {
+      binInput.value = bin;
+      this.hideBinHistory();
+    }
+  }
+
+  removeBinFromHistory(binCode) {
+    let history = this.getBinHistory();
+    history = history.filter((item) => item.bin !== binCode);
+    this.saveBinHistory(history);
+    this.renderBinHistory();
+  }
+
+  formatDate(dateString) {
+    try {
+      return new Date(dateString).toLocaleDateString();
+    } catch (e) {
+      return "Recently";
+    }
   }
 }
 
