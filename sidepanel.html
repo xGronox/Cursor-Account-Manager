@@ -4,7 +4,10 @@
     <meta charset="utf-8" />
     <title>Cursor Account Manager - Sidebar</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="sidepanel-modern.css" />
   </head>
   <body>
@@ -236,74 +239,191 @@
       </div>
 
       <!-- NEW: Bypass Testing Tab Content -->
-      <div id="bypassContent" class="tab-content scrollable" style="display: none; overflow-y: auto; max-height: calc(100vh - 200px);">
-        <div class="bypass-section" style="padding: 16px;">
+      <div
+        id="bypassContent"
+        class="tab-content scrollable"
+        style="display: none; overflow-y: auto; max-height: calc(100vh - 200px)"
+      >
+        <div class="bypass-section" style="padding: 16px">
           <div class="bypass-header">
-            <div class="bypass-title" style="display: flex; align-items: center; gap: 12px;">
+            <div
+              class="bypass-title"
+              style="display: flex; align-items: center; gap: 12px"
+            >
               <span class="icon">🛡️</span>
               <span>Bypass Security Tester</span>
-              <span style="background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: #1f2937; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);">Under Development</span>
+              <span
+                style="
+                  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+                  color: #1f2937;
+                  padding: 2px 8px;
+                  border-radius: 12px;
+                  font-size: 10px;
+                  font-weight: 600;
+                  letter-spacing: 0.5px;
+                  text-transform: uppercase;
+                  box-shadow: 0 2px 4px rgba(251, 191, 36, 0.3);
+                "
+                >Under Development</span
+              >
             </div>
           </div>
 
-          <!-- Settings Button -->
-          <div style="display: flex; justify-content: flex-end; margin-bottom: 12px;">
-            <button id="bypassSettingsBtn" class="btn btn-secondary btn-sm" style="display: flex; align-items: center; gap: 6px;">
+          <!-- Control Buttons -->
+          <div
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 12px;
+            "
+          >
+            <button
+              id="bypassDetectUrl"
+              class="btn btn-primary btn-sm"
+              style="display: flex; align-items: center; gap: 6px"
+            >
+              <span>🎯</span> Detect URL
+            </button>
+            <button
+              id="bypassSettingsBtn"
+              class="btn btn-secondary btn-sm"
+              style="display: flex; align-items: center; gap: 6px"
+            >
               <span>⚙️</span> Settings
             </button>
           </div>
 
           <!-- Target Configuration -->
           <div class="bypass-controls">
-            <div class="input-group" style="display: flex; gap: 8px; margin-bottom: 16px;">
+            <div
+              class="input-group"
+              style="display: flex; gap: 8px; margin-bottom: 16px"
+            >
               <input
                 type="text"
                 id="bypassTargetUrl"
                 class="bypass-url-input filter-input"
                 placeholder="https://cursor.com/api/dashboard/delete-account"
-                style="flex: 1;"
+                style="flex: 1"
               />
-              <button id="bypassDetectUrl" class="btn btn-primary btn-sm">
-                🎯 Detect URL
-              </button>
             </div>
           </div>
-          
+
           <!-- Action Buttons (Moved to Top) -->
-          <div style="margin-bottom: 16px; padding: 12px; background: #1e293b; border-radius: 8px; border: 1px solid #334155;">
-            <div style="font-size: 13px; color: #cbd5e1; margin-bottom: 10px; font-weight: 600;">Quick Actions</div>
-            
+          <div
+            style="
+              margin-bottom: 16px;
+              padding: 12px;
+              background: #1e293b;
+              border-radius: 8px;
+              border: 1px solid #334155;
+            "
+          >
+            <div
+              style="
+                font-size: 13px;
+                color: #cbd5e1;
+                margin-bottom: 10px;
+                font-weight: 600;
+              "
+            >
+              Quick Actions
+            </div>
+
             <!-- All Actions in One Row -->
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(80px, 1fr)); gap: 8px;">
-              <button 
-                id="startBypassTest" 
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+                gap: 8px;
+              "
+            >
+              <button
+                id="startBypassTest"
                 type="button"
-                style="padding: 8px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                style="
+                  padding: 8px;
+                  background: #3b82f6;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 12px;
+                  font-weight: 500;
+                  white-space: nowrap;
+                "
+              >
                 ▶️ Start
               </button>
-              <button 
-                id="stopBypassTest" 
+              <button
+                id="stopBypassTest"
                 type="button"
-                disabled 
-                style="padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; cursor: not-allowed; font-size: 12px; font-weight: 500; opacity: 0.5; white-space: nowrap;">
+                disabled
+                style="
+                  padding: 8px;
+                  background: #6b7280;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: not-allowed;
+                  font-size: 12px;
+                  font-weight: 500;
+                  opacity: 0.5;
+                  white-space: nowrap;
+                "
+              >
                 ⏹️ Stop
               </button>
-              <button 
-                id="exportBypassResults" 
+              <button
+                id="exportBypassResults"
                 type="button"
-                style="padding: 8px; background: #1f2937; color: white; border: 1px solid #374151; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                style="
+                  padding: 8px;
+                  background: #1f2937;
+                  color: white;
+                  border: 1px solid #374151;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 12px;
+                  font-weight: 500;
+                  white-space: nowrap;
+                "
+              >
                 💾 Export
               </button>
-              <button 
-                id="viewBypassResults" 
+              <button
+                id="viewBypassResults"
                 type="button"
-                style="padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                style="
+                  padding: 8px;
+                  background: #10b981;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 12px;
+                  font-weight: 500;
+                  white-space: nowrap;
+                "
+              >
                 📊 Results
               </button>
-              <button 
-                id="openBypassConsole" 
+              <button
+                id="openBypassConsole"
                 type="button"
-                style="padding: 8px; background: #8b5cf6; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; font-weight: 500; white-space: nowrap;">
+                style="
+                  padding: 8px;
+                  background: #8b5cf6;
+                  color: white;
+                  border: none;
+                  border-radius: 4px;
+                  cursor: pointer;
+                  font-size: 12px;
+                  font-weight: 500;
+                  white-space: nowrap;
+                "
+              >
                 🖥️ Console
               </button>
             </div>
@@ -319,7 +439,12 @@
 
           <div class="bypass-techniques scrollable">
             <div class="technique-item">
-              <input type="checkbox" id="tech-param" data-technique="parameter" checked>
+              <input
+                type="checkbox"
+                id="tech-param"
+                data-technique="parameter"
+                checked
+              />
               <label for="tech-param" class="technique-label">
                 Parameter Injection
               </label>
@@ -327,7 +452,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-header" data-technique="header" checked>
+              <input
+                type="checkbox"
+                id="tech-header"
+                data-technique="header"
+                checked
+              />
               <label for="tech-header" class="technique-label">
                 Header Manipulation
               </label>
@@ -335,7 +465,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-method" data-technique="method" checked>
+              <input
+                type="checkbox"
+                id="tech-method"
+                data-technique="method"
+                checked
+              />
               <label for="tech-method" class="technique-label">
                 Method Override
               </label>
@@ -343,7 +478,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-content" data-technique="content" checked>
+              <input
+                type="checkbox"
+                id="tech-content"
+                data-technique="content"
+                checked
+              />
               <label for="tech-content" class="technique-label">
                 Content-Type Bypass
               </label>
@@ -351,7 +491,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-auth" data-technique="auth" checked>
+              <input
+                type="checkbox"
+                id="tech-auth"
+                data-technique="auth"
+                checked
+              />
               <label for="tech-auth" class="technique-label">
                 Authorization Bypass
               </label>
@@ -359,7 +504,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-storage" data-technique="storage" checked>
+              <input
+                type="checkbox"
+                id="tech-storage"
+                data-technique="storage"
+                checked
+              />
               <label for="tech-storage" class="technique-label">
                 Storage Manipulation
               </label>
@@ -367,7 +517,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-frontend" data-technique="frontend" checked>
+              <input
+                type="checkbox"
+                id="tech-frontend"
+                data-technique="frontend"
+                checked
+              />
               <label for="tech-frontend" class="technique-label">
                 Frontend Override
               </label>
@@ -375,7 +530,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-race" data-technique="race" checked>
+              <input
+                type="checkbox"
+                id="tech-race"
+                data-technique="race"
+                checked
+              />
               <label for="tech-race" class="technique-label">
                 Race Condition
               </label>
@@ -383,7 +543,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-encoding" data-technique="encoding" checked>
+              <input
+                type="checkbox"
+                id="tech-encoding"
+                data-technique="encoding"
+                checked
+              />
               <label for="tech-encoding" class="technique-label">
                 Encoding Bypass
               </label>
@@ -391,7 +556,12 @@
             </div>
 
             <div class="technique-item">
-              <input type="checkbox" id="tech-endpoint" data-technique="endpoint" checked>
+              <input
+                type="checkbox"
+                id="tech-endpoint"
+                data-technique="endpoint"
+                checked
+              />
               <label for="tech-endpoint" class="technique-label">
                 Alternative Endpoints
               </label>
@@ -399,15 +569,30 @@
             </div>
           </div>
 
-          <div id="bypassTotalTests" style="text-align: center; margin: 8px 0; color: var(--text-secondary); font-size: 12px">
+          <div
+            id="bypassTotalTests"
+            style="
+              text-align: center;
+              margin: 8px 0;
+              color: var(--text-secondary);
+              font-size: 12px;
+            "
+          >
             116 tests selected
           </div>
 
-
           <!-- Progress Section -->
-          <div id="bypassProgressSection" class="bypass-progress" style="display: none">
+          <div
+            id="bypassProgressSection"
+            class="bypass-progress"
+            style="display: none"
+          >
             <div class="progress-bar">
-              <div class="progress-fill" id="bypassProgressFill" style="width: 0%"></div>
+              <div
+                class="progress-fill"
+                id="bypassProgressFill"
+                style="width: 0%"
+              ></div>
             </div>
             <div class="progress-text" id="bypassProgressText">
               Initializing...
@@ -415,7 +600,11 @@
           </div>
 
           <!-- Results Section -->
-          <div id="bypassResultsSection" class="bypass-results" style="display: none">
+          <div
+            id="bypassResultsSection"
+            class="bypass-results"
+            style="display: none"
+          >
             <h3 style="margin-bottom: 12px">Test Results</h3>
             <div class="results-summary">
               <div class="result-stat success">
@@ -431,7 +620,11 @@
                 <div class="result-label">Failed</div>
               </div>
             </div>
-            <div id="bypassResultDetails" class="result-details" style="margin-top: 12px">
+            <div
+              id="bypassResultDetails"
+              class="result-details"
+              style="margin-top: 12px"
+            >
               <!-- Detailed results will be populated here -->
             </div>
           </div>
@@ -529,46 +722,78 @@
 
     <!-- Bypass Settings Modal -->
     <div id="bypassSettingsModal" class="modal" style="display: none">
-      <div class="modal-content" style="max-width: 600px;">
+      <div class="modal-content" style="max-width: 600px">
         <div class="modal-header">
           <h3>🛡️ Bypass Testing Settings</h3>
           <button class="modal-close" id="closeBypassSettingsModal">✕</button>
         </div>
-        <div class="modal-body" style="max-height: 400px; overflow-y: auto;">
+        <div class="modal-body" style="max-height: 400px; overflow-y: auto">
           <!-- URL Presets Section -->
           <div class="settings-section">
-            <h4 style="margin-bottom: 12px; color: var(--text-primary);">URL Presets</h4>
+            <h4 style="margin-bottom: 12px; color: var(--text-primary)">
+              URL Presets
+            </h4>
             <div class="form-group">
               <label for="bypassPresetName">Preset Name:</label>
-              <input type="text" id="bypassPresetName" placeholder="e.g., Cursor API" />
+              <input
+                type="text"
+                id="bypassPresetName"
+                placeholder="e.g., Cursor API"
+              />
             </div>
             <div class="form-group">
               <label for="bypassPresetUrl">URL:</label>
-              <input type="text" id="bypassPresetUrl" placeholder="https://cursor.com/api/endpoint" />
+              <input
+                type="text"
+                id="bypassPresetUrl"
+                placeholder="https://cursor.com/api/endpoint"
+              />
             </div>
-            <button id="addBypassPreset" class="btn btn-secondary btn-sm">➕ Add Preset</button>
-            
-            <div id="bypassPresetsList" style="margin-top: 12px;">
+            <button id="addBypassPreset" class="btn btn-secondary btn-sm">
+              ➕ Add Preset
+            </button>
+
+            <div id="bypassPresetsList" style="margin-top: 12px">
               <!-- Presets will be populated here -->
             </div>
           </div>
 
-          <hr style="margin: 20px 0; border: 1px solid var(--border-color);" />
+          <hr style="margin: 20px 0; border: 1px solid var(--border-color)" />
 
           <!-- Advanced Options Section -->
           <div class="settings-section">
-            <h4 style="margin-bottom: 12px; color: var(--text-primary);">Advanced Options</h4>
+            <h4 style="margin-bottom: 12px; color: var(--text-primary)">
+              Advanced Options
+            </h4>
             <div class="form-group">
               <label for="bypassRequestDelay">Request Delay (ms):</label>
-              <input type="number" id="bypassRequestDelay" value="500" min="0" max="5000" />
+              <input
+                type="number"
+                id="bypassRequestDelay"
+                value="500"
+                min="0"
+                max="5000"
+              />
             </div>
             <div class="form-group">
               <label for="bypassTimeout">Timeout (seconds):</label>
-              <input type="number" id="bypassTimeout" value="10" min="1" max="60" />
+              <input
+                type="number"
+                id="bypassTimeout"
+                value="10"
+                min="1"
+                max="60"
+              />
             </div>
             <div class="form-group">
               <label for="bypassConcurrency">Max Concurrent Requests:</label>
-              <input type="number" id="bypassConcurrency" value="5" min="1" max="20" />
+              <input
+                type="number"
+                id="bypassConcurrency"
+                value="5"
+                min="1"
+                max="20"
+              />
             </div>
             <div class="form-group">
               <label>
@@ -584,32 +809,82 @@
             </div>
           </div>
 
-          <hr style="margin: 20px 0; border: 1px solid var(--border-color);" />
+          <hr style="margin: 20px 0; border: 1px solid var(--border-color)" />
 
           <!-- Default Techniques Section -->
           <div class="settings-section">
-            <h4 style="margin-bottom: 12px; color: var(--text-primary);">Default Techniques</h4>
-            <p style="font-size: 12px; color: var(--text-secondary); margin-bottom: 8px;">
+            <h4 style="margin-bottom: 12px; color: var(--text-primary)">
+              Default Techniques
+            </h4>
+            <p
+              style="
+                font-size: 12px;
+                color: var(--text-secondary);
+                margin-bottom: 8px;
+              "
+            >
               Select which techniques should be enabled by default:
             </p>
-            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">
-              <label><input type="checkbox" id="defaultTechParam" checked /> Parameter Injection</label>
-              <label><input type="checkbox" id="defaultTechHeader" checked /> Header Manipulation</label>
-              <label><input type="checkbox" id="defaultTechMethod" checked /> Method Override</label>
-              <label><input type="checkbox" id="defaultTechContent" checked /> Content-Type</label>
-              <label><input type="checkbox" id="defaultTechAuth" checked /> Authorization</label>
-              <label><input type="checkbox" id="defaultTechStorage" checked /> Storage Manipulation</label>
-              <label><input type="checkbox" id="defaultTechFrontend" checked /> Frontend Override</label>
-              <label><input type="checkbox" id="defaultTechRace" checked /> Race Condition</label>
-              <label><input type="checkbox" id="defaultTechEncoding" checked /> Encoding Bypass</label>
-              <label><input type="checkbox" id="defaultTechEndpoint" checked /> Alt Endpoints</label>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 8px;
+              "
+            >
+              <label
+                ><input type="checkbox" id="defaultTechParam" checked />
+                Parameter Injection</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechHeader" checked /> Header
+                Manipulation</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechMethod" checked /> Method
+                Override</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechContent" checked />
+                Content-Type</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechAuth" checked />
+                Authorization</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechStorage" checked />
+                Storage Manipulation</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechFrontend" checked />
+                Frontend Override</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechRace" checked /> Race
+                Condition</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechEncoding" checked />
+                Encoding Bypass</label
+              >
+              <label
+                ><input type="checkbox" id="defaultTechEndpoint" checked /> Alt
+                Endpoints</label
+              >
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button id="saveBypassSettings" class="btn btn-primary">💾 Save Settings</button>
-          <button id="resetBypassSettings" class="btn btn-danger btn-sm">🔄 Reset to Default</button>
-          <button id="cancelBypassSettings" class="btn btn-secondary">Cancel</button>
+          <button id="saveBypassSettings" class="btn btn-primary">
+            💾 Save Settings
+          </button>
+          <button id="resetBypassSettings" class="btn btn-danger btn-sm">
+            🔄 Reset to Default
+          </button>
+          <button id="cancelBypassSettings" class="btn btn-secondary">
+            Cancel
+          </button>
         </div>
       </div>
     </div>
