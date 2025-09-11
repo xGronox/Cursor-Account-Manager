@@ -13,58 +13,66 @@ const generatorService = new GeneratorService();
 const STRIPE_API_URL = "https://api.stripe.com/v1/payment_methods";
 
 // Check if webRequest API is available before using it
-if (chrome.webRequest && chrome.webRequest.onCompleted) {
+if (
+  chrome.webRequest &&
+  chrome.webRequest.onCompleted &&
+  chrome.webRequest.onErrorOccurred
+) {
   console.log("✅ WebRequest API available, setting up Stripe monitoring...");
 
-  // Monitor Stripe API responses for pro trial activation
-  chrome.webRequest.onCompleted.addListener(
-    (details) => {
-      console.log("Stripe API Response:", {
-        url: details.url,
-        statusCode: details.statusCode,
-        method: details.method,
-      });
+  try {
+    // Monitor Stripe API responses for pro trial activation
+    chrome.webRequest.onCompleted.addListener(
+      (details) => {
+        console.log("Stripe API Response:", {
+          url: details.url,
+          statusCode: details.statusCode,
+          method: details.method,
+        });
 
-      if (typeof details.tabId === "number" && details.tabId >= 0) {
-        try {
-          chrome.tabs.sendMessage(details.tabId, {
-            type: "stripe-response",
-            statusCode: details.statusCode,
-            url: details.url,
-          });
-        } catch (error) {
-          console.log("Failed to send stripe response to tab:", error);
+        if (typeof details.tabId === "number" && details.tabId >= 0) {
+          try {
+            chrome.tabs.sendMessage(details.tabId, {
+              type: "stripe-response",
+              statusCode: details.statusCode,
+              url: details.url,
+            });
+          } catch (error) {
+            console.log("Failed to send stripe response to tab:", error);
+          }
         }
-      }
-    },
-    { urls: [STRIPE_API_URL] }
-  );
+      },
+      { urls: [STRIPE_API_URL] }
+    );
 
-  chrome.webRequest.onErrorOccurred.addListener(
-    (details) => {
-      console.log("Stripe API Error:", {
-        url: details.url,
-        error: details.error,
-        method: details.method,
-      });
+    chrome.webRequest.onErrorOccurred.addListener(
+      (details) => {
+        console.log("Stripe API Error:", {
+          url: details.url,
+          error: details.error,
+          method: details.method,
+        });
 
-      if (typeof details.tabId === "number" && details.tabId >= 0) {
-        try {
-          chrome.tabs.sendMessage(details.tabId, {
-            type: "stripe-response",
-            statusCode: 0,
-            error: details.error,
-            url: details.url,
-          });
-        } catch (error) {
-          console.log("Failed to send stripe error to tab:", error);
+        if (typeof details.tabId === "number" && details.tabId >= 0) {
+          try {
+            chrome.tabs.sendMessage(details.tabId, {
+              type: "stripe-response",
+              statusCode: 0,
+              error: details.error,
+              url: details.url,
+            });
+          } catch (error) {
+            console.log("Failed to send stripe error to tab:", error);
+          }
         }
-      }
-    },
-    { urls: [STRIPE_API_URL] }
-  );
+      },
+      { urls: [STRIPE_API_URL] }
+    );
 
-  console.log("✅ Stripe API monitoring setup completed");
+    console.log("✅ Stripe API monitoring setup completed");
+  } catch (error) {
+    console.error("❌ Failed to setup WebRequest listeners:", error);
+  }
 } else {
   console.warn("⚠️ WebRequest API not available - Stripe monitoring disabled");
 }

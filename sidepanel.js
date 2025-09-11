@@ -72,6 +72,19 @@ class CursorAccountSidebar {
   setupEventListeners() {
     console.log("🔧 Setting up event listeners...");
 
+    // Helper function to safely add event listeners
+    const safeAddListener = (elementId, event, handler, description) => {
+      const element = document.getElementById(elementId);
+      if (element) {
+        element.addEventListener(event, handler);
+        console.log(`✅ ${description} listener added`);
+        return true;
+      } else {
+        console.error(`❌ ${description} element (${elementId}) not found`);
+        return false;
+      }
+    };
+
     // Test if basic elements exist
     const accountsTab = document.getElementById("accountsTab");
     const paymentsTab = document.getElementById("paymentsTab");
@@ -129,54 +142,84 @@ class CursorAccountSidebar {
     }
 
     // Add account button
-    document.getElementById("addAccountBtn").addEventListener("click", () => {
-      this.showAddAccountModal();
-    });
+    safeAddListener(
+      "addAccountBtn",
+      "click",
+      () => {
+        this.showAddAccountModal();
+      },
+      "Add account button"
+    );
 
     // Export current button
-    document
-      .getElementById("exportCurrentBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "exportCurrentBtn",
+      "click",
+      () => {
         this.exportCurrentAccount();
-      });
+      },
+      "Export current button"
+    );
 
     // Import from Downloads button
-    document
-      .getElementById("importFromDownloadsBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "importFromDownloadsBtn",
+      "click",
+      () => {
         this.importFromDownloads();
-      });
+      },
+      "Import from downloads button"
+    );
 
     // Import Folder button
-    document.getElementById("importFolderBtn").addEventListener("click", () => {
-      this.importFromFolder();
-    });
+    safeAddListener(
+      "importFolderBtn",
+      "click",
+      () => {
+        this.importFromFolder();
+      },
+      "Import folder button"
+    );
 
     // Downloads file input change
-    document
-      .getElementById("downloadsFileInput")
-      .addEventListener("change", (e) => {
+    safeAddListener(
+      "downloadsFileInput",
+      "change",
+      (e) => {
         this.handleDownloadsImport(e.target.files);
-      });
+      },
+      "Downloads file input"
+    );
 
     // Folder input change
-    document.getElementById("folderInput").addEventListener("change", (e) => {
-      this.handleFolderImport(e.target.files);
-    });
+    safeAddListener(
+      "folderInput",
+      "change",
+      (e) => {
+        this.handleFolderImport(e.target.files);
+      },
+      "Folder input"
+    );
 
     // Advanced tools toggle
-    document
-      .getElementById("toggleAdvancedBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "toggleAdvancedBtn",
+      "click",
+      () => {
         this.toggleAdvancedPanel();
-      });
+      },
+      "Toggle advanced button"
+    );
 
     // Refresh status button
-    document
-      .getElementById("refreshStatusBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "refreshStatusBtn",
+      "click",
+      () => {
         this.forceRefreshStatus();
-      });
+      },
+      "Refresh status button"
+    );
 
     // Generator tab buttons
     const generateCardsBtn = document.getElementById("generateCardsBtn");
@@ -198,39 +241,74 @@ class CursorAccountSidebar {
       );
     }
 
+    const activateProTrialGeneratorBtn = document.getElementById(
+      "activateProTrialGeneratorBtn"
+    );
+    if (activateProTrialGeneratorBtn) {
+      activateProTrialGeneratorBtn.addEventListener("click", () =>
+        this.activateProTrialWithDebounce()
+      );
+    }
+
     // Initialize BIN history
     this.initBinHistory();
 
     // Consolidate duplicates button
-    document
-      .getElementById("consolidateDuplicatesBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "consolidateDuplicatesBtn",
+      "click",
+      () => {
         this.consolidateDuplicates();
-      });
+      },
+      "Consolidate duplicates button"
+    );
 
     // Clear all data button
-    document.getElementById("clearAllDataBtn").addEventListener("click", () => {
-      this.clearAllData();
-    });
+    safeAddListener(
+      "clearAllDataBtn",
+      "click",
+      () => {
+        this.clearAllData();
+      },
+      "Clear all data button"
+    );
 
     // Payment functionality
-    document.getElementById("importCardsBtn").addEventListener("click", () => {
-      this.showImportCardsModal();
-    });
+    safeAddListener(
+      "importCardsBtn",
+      "click",
+      () => {
+        this.showImportCardsModal();
+      },
+      "Import cards button"
+    );
 
-    document.getElementById("exportCardsBtn").addEventListener("click", () => {
-      this.exportCards();
-    });
+    safeAddListener(
+      "exportCardsBtn",
+      "click",
+      () => {
+        this.exportCards();
+      },
+      "Export cards button"
+    );
 
-    document
-      .getElementById("findPaymentFieldsBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "findPaymentFieldsBtn",
+      "click",
+      () => {
         this.findPaymentFields();
-      });
+      },
+      "Find payment fields button"
+    );
 
-    document.getElementById("clearCardsBtn").addEventListener("click", () => {
-      this.clearAllCards();
-    });
+    safeAddListener(
+      "clearCardsBtn",
+      "click",
+      () => {
+        this.clearAllCards();
+      },
+      "Clear cards button"
+    );
 
     // NEW: Bypass Testing Event Listeners
     this.setupBypassEventListeners();
@@ -317,62 +395,45 @@ class CursorAccountSidebar {
       detectInfoBtn.replaceWith(detectInfoBtn.cloneNode(true)); // Remove all listeners
     }
 
-    // Card filter and selection functionality
-    document
-      .getElementById("cardFilterInput")
-      .addEventListener("input", (e) => {
-        this.cardFilters.search = e.target.value.toLowerCase();
-        this.filterCards();
-      });
-
-    document
-      .getElementById("cardTypeFilter")
-      .addEventListener("change", (e) => {
-        this.cardFilters.type = e.target.value.toLowerCase();
-        this.filterCards();
-      });
-
-    document
-      .getElementById("selectAllCards")
-      .addEventListener("change", (e) => {
-        this.selectAllCards(e.target.checked);
-      });
-
-    document
-      .getElementById("deleteSelectedBtn")
-      .addEventListener("click", () => {
-        this.deleteSelectedCards();
-      });
-
-    document
-      .getElementById("clearSelectionBtn")
-      .addEventListener("click", () => {
-        this.clearSelection();
-      });
+    // Card filter and selection functionality (duplicate removed - already handled above)
 
     // Cards modal controls
-    document.getElementById("closeCardsModal").addEventListener("click", () => {
-      this.hideImportCardsModal();
-    });
-
-    document
-      .getElementById("cancelImportCardsBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "closeCardsModal",
+      "click",
+      () => {
         this.hideImportCardsModal();
-      });
+      },
+      "Close cards modal button"
+    );
 
-    document
-      .getElementById("confirmImportCardsBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "cancelImportCardsBtn",
+      "click",
+      () => {
+        this.hideImportCardsModal();
+      },
+      "Cancel import cards button"
+    );
+
+    safeAddListener(
+      "confirmImportCardsBtn",
+      "click",
+      () => {
         this.importCardsFromText();
-      });
+      },
+      "Confirm import cards button"
+    );
 
     // Cards file input
-    document
-      .getElementById("cardsFileInput")
-      .addEventListener("change", (e) => {
+    safeAddListener(
+      "cardsFileInput",
+      "change",
+      (e) => {
         this.handleCardsFileImport(e.target.files);
-      });
+      },
+      "Cards file input"
+    );
 
     // Debug panel controls (enable with Ctrl+Shift+D)
     document.addEventListener("keydown", (e) => {
@@ -381,47 +442,83 @@ class CursorAccountSidebar {
       }
     });
 
-    document
-      .getElementById("showStoredDataBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "showStoredDataBtn",
+      "click",
+      () => {
         this.showStoredData();
-      });
+      },
+      "Show stored data button"
+    );
 
     // Account deletion functionality
-    document
-      .getElementById("deleteFreeAccountBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "deleteFreeAccountBtn",
+      "click",
+      () => {
         this.deleteFreeAccount();
-      });
+      },
+      "Delete free account button"
+    );
 
-    document
-      .getElementById("deleteProTrialAccountBtn")
-      .addEventListener("click", () => {
+    safeAddListener(
+      "deleteProTrialAccountBtn",
+      "click",
+      () => {
         this.deleteProTrialAccount();
-      });
+      },
+      "Delete pro trial account button"
+    );
 
     // Refresh button
-    document.getElementById("refreshBtn").addEventListener("click", () => {
-      this.loadAccounts();
-    });
+    const refreshBtn = document.getElementById("refreshBtn");
+    if (refreshBtn) {
+      refreshBtn.addEventListener("click", () => {
+        this.loadAccounts();
+      });
+      console.log("✅ Refresh button listener added");
+    } else {
+      console.error("❌ Refresh button not found");
+    }
 
     // Dark mode toggle
-    document.getElementById("darkModeToggle").addEventListener("click", () => {
-      this.toggleDarkMode();
-    });
+    const darkModeToggle = document.getElementById("darkModeToggle");
+    if (darkModeToggle) {
+      darkModeToggle.addEventListener("click", () => {
+        this.toggleDarkMode();
+      });
+      console.log("✅ Dark mode toggle listener added");
+    } else {
+      console.error("❌ Dark mode toggle not found");
+    }
 
     // Modal controls
-    document.getElementById("closeModal").addEventListener("click", () => {
-      this.hideModal();
-    });
+    safeAddListener(
+      "closeModal",
+      "click",
+      () => {
+        this.hideModal();
+      },
+      "Close modal button"
+    );
 
-    document.getElementById("cancelAddBtn").addEventListener("click", () => {
-      this.hideModal();
-    });
+    safeAddListener(
+      "cancelAddBtn",
+      "click",
+      () => {
+        this.hideModal();
+      },
+      "Cancel add button"
+    );
 
-    document.getElementById("confirmAddBtn").addEventListener("click", () => {
-      this.addAccountFromJSON();
-    });
+    safeAddListener(
+      "confirmAddBtn",
+      "click",
+      () => {
+        this.addAccountFromJSON();
+      },
+      "Confirm add button"
+    );
   }
 
   async loadAccounts() {
@@ -1041,10 +1138,23 @@ Choose NO if you want to keep the backup file.`
     // Save preference
     chrome.storage.local.set({ darkMode: isDark });
 
-    // Update button
-    document.getElementById("darkModeToggle").textContent = isDark
-      ? "☀️"
-      : "🌙";
+    // Update button SVG
+    const darkModeBtn = document.getElementById("darkModeToggle");
+    const svg = darkModeBtn.querySelector("svg path");
+
+    if (isDark) {
+      // Sun icon (light mode)
+      svg.setAttribute(
+        "d",
+        "M12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M12,2A1,1 0 0,0 11,3V5A1,1 0 0,0 12,6A1,1 0 0,0 13,5V3A1,1 0 0,0 12,2M18.5,4.22L17.78,4.95L16.34,3.5L17.07,2.78C17.46,2.39 18.09,2.39 18.5,2.78C18.89,3.17 18.89,3.83 18.5,4.22M4.22,18.5L4.95,17.78L3.5,16.34L2.78,17.07C2.39,17.46 2.39,18.09 2.78,18.5C3.17,18.89 3.83,18.89 4.22,18.5M1,13H3A1,1 0 0,0 4,12A1,1 0 0,0 3,11H1A1,1 0 0,0 0,12A1,1 0 0,0 1,13M20,13H22A1,1 0 0,0 23,12A1,1 0 0,0 22,11H20A1,1 0 0,0 19,12A1,1 0 0,0 20,13M4.22,5.5L2.78,4.05L3.5,3.34L4.95,4.78C4.56,5.17 4.56,5.83 4.22,5.5M18.5,19.78L19.22,19.05L20.66,20.5L19.95,21.22C19.56,21.61 18.92,21.61 18.5,21.22C18.11,20.83 18.11,20.17 18.5,19.78Z"
+      );
+    } else {
+      // Moon icon (dark mode)
+      svg.setAttribute(
+        "d",
+        "M17.75,4.09L15.22,6.03L16.13,9.09L13.5,7.28L10.87,9.09L11.78,6.03L9.25,4.09L12.44,4L13.5,1L14.56,4L17.75,4.09M21.25,11L19.61,12.25L20.2,14.23L18.5,13.06L16.8,14.23L17.39,12.25L15.75,11L17.81,10.95L18.5,9L19.19,10.95L21.25,11M18.97,15.95C19.8,15.87 20.69,17.05 20.16,17.8C19.84,18.25 19.5,18.67 19.08,19.07C15.17,23 8.84,23 4.94,19.07C1.03,15.17 1.03,8.83 4.94,4.93C5.34,4.53 5.76,4.17 6.21,3.85C6.96,3.32 8.14,4.21 8.06,5.04C7.79,7.9 8.75,10.87 10.95,13.06C13.14,15.26 16.1,16.22 18.97,15.95M17.33,17.97C14.5,17.81 11.7,16.64 9.53,14.5C7.36,12.31 6.2,9.5 6.04,6.68C3.23,9.82 3.34,14.4 6.35,17.41C9.37,20.43 14,20.54 17.33,17.97Z"
+      );
+    }
   }
 
   showLoading(show) {
@@ -3341,7 +3451,16 @@ document.addEventListener("DOMContentLoaded", () => {
   chrome.storage.local.get(["darkMode"], (result) => {
     if (result.darkMode) {
       document.body.classList.add("dark-mode");
-      document.getElementById("darkModeToggle").textContent = "☀️";
+
+      // Update dark mode toggle icon to sun
+      const darkModeBtn = document.getElementById("darkModeToggle");
+      const svg = darkModeBtn?.querySelector("svg path");
+      if (svg) {
+        svg.setAttribute(
+          "d",
+          "M12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6A6,6 0 0,1 18,12A6,6 0 0,1 12,18M12,2A1,1 0 0,0 11,3V5A1,1 0 0,0 12,6A1,1 0 0,0 13,5V3A1,1 0 0,0 12,2M18.5,4.22L17.78,4.95L16.34,3.5L17.07,2.78C17.46,2.39 18.09,2.39 18.5,2.78C18.89,3.17 18.89,3.83 18.5,4.22M4.22,18.5L4.95,17.78L3.5,16.34L2.78,17.07C2.39,17.46 2.39,18.09 2.78,18.5C3.17,18.89 3.83,18.89 4.22,18.5M1,13H3A1,1 0 0,0 4,12A1,1 0 0,0 3,11H1A1,1 0 0,0 0,12A1,1 0 0,0 1,13M20,13H22A1,1 0 0,0 23,12A1,1 0 0,0 22,11H20A1,1 0 0,0 19,12A1,1 0 0,0 20,13M4.22,5.5L2.78,4.05L3.5,3.34L4.95,4.78C4.56,5.17 4.56,5.83 4.22,5.5M18.5,19.78L19.22,19.05L20.66,20.5L19.95,21.22C19.56,21.61 18.92,21.61 18.5,21.22C18.11,20.83 18.11,20.17 18.5,19.78Z"
+        );
+      }
     }
   });
 
