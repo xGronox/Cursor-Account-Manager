@@ -3493,18 +3493,31 @@ Available techniques:
         currentWindow: true,
       });
 
-      if (!currentTab.url.includes("cursor.com")) {
+      if (!currentTab || !currentTab.url) {
+        this.showNotification("❌ No active tab found", "error");
+        this.isActivatingTrial = false;
+        return;
+      }
+
+      if (
+        !currentTab.url.includes("cursor.com") &&
+        !currentTab.url.includes("checkout.stripe.com")
+      ) {
         // Create new tab with trial page first
+        console.log("🆕 Creating new tab for trial activation");
         const newTab = await chrome.tabs.create({
           url: "https://cursor.com/trial",
         });
 
         // Wait for page to load and try to activate
         setTimeout(async () => {
-          this.tryActivateWithCards(newTab.id, cards);
+          await this.tryActivateWithCards(newTab.id, cards);
         }, 3000);
       } else if (currentTab.url.includes("checkout.stripe.com")) {
         // We're already on Stripe checkout - start activation directly
+        console.log(
+          "🎯 Detected Stripe checkout page, starting direct activation"
+        );
         this.showNotification(
           `🎯 Starting activation with ${cards.length} cards...`,
           "info"
@@ -3530,7 +3543,10 @@ Available techniques:
         );
       } else {
         // We're on cursor.com, try to navigate to trial/checkout
-        this.tryActivateOnCurrentTab(currentTab, cards);
+        console.log(
+          "🔍 On cursor.com, trying to find trial button or redirect"
+        );
+        await this.tryActivateOnCurrentTab(currentTab, cards);
       }
     } catch (error) {
       console.error("Error activating Pro Trial:", error);
@@ -3573,6 +3589,7 @@ Available techniques:
 
     // Check if we're on Stripe checkout page and use direct activation
     if (tab.url.includes("checkout.stripe.com")) {
+      console.log("🎯 Detected Stripe checkout, using direct card activation");
       this.showNotification(
         `🎯 Starting activation with ${cards.length} cards...`,
         "info"
@@ -3602,11 +3619,13 @@ Available techniques:
 
     // If not on cursor.com, try different pages
     if (!tab.url.includes("cursor.com")) {
+      console.log("🔄 Not on cursor.com, trying different pages");
       await this.tryDifferentPages(tab, cards);
       return;
     }
 
-    // For cursor.com pages, try the regular flow
+    // For cursor.com pages, try to find trial button first
+    console.log("🔍 On cursor.com, looking for trial button or redirect");
     chrome.tabs.sendMessage(
       tab.id,
       {
@@ -3615,17 +3634,38 @@ Available techniques:
       async (response) => {
         if (chrome.runtime.lastError) {
           console.log("Content script not ready, reloading tab...");
-          await chrome.tabs.reload(tab.id);
-          setTimeout(() => this.tryActivateOnCurrentTab(tab, cards), 3000);
+          try {
+            await chrome.tabs.reload(tab.id);
+            setTimeout(() => this.tryActivateOnCurrentTab(tab, cards), 3000);
+          } catch (reloadError) {
+            console.error("Failed to reload tab:", reloadError);
+            this.isActivatingTrial = false;
+          }
           return;
         }
 
         if (response && response.success) {
           this.showNotification(
-            "🎯 Pro Trial activation initiated!",
+            "🎯 Pro Trial activation initiated! Looking for redirect...",
             "success"
           );
+
+          // Wait for potential redirect to Stripe, then check if we need cards
+          setTimeout(async () => {
+            const [updatedTab] = await chrome.tabs.query({
+              active: true,
+              currentWindow: true,
+            });
+            if (updatedTab && updatedTab.url.includes("checkout.stripe.com")) {
+              console.log("🎯 Redirected to Stripe, sending cards");
+              chrome.tabs.sendMessage(updatedTab.id, {
+                type: "startProTrialActivation",
+                cards: cards,
+              });
+            }
+          }, 2000);
         } else {
+          console.log("🔄 Trial button not found, trying different pages");
           await this.tryDifferentPages(tab, cards);
         }
       }
@@ -3634,16 +3674,16 @@ Available techniques:
 
   async tryDifferentPages(tab, cards) {
     const pages = [
-      "https://cursor.com",
-      "https://cursor.com/dashboard",
-      "https://cursor.com/trial",
+      "https://cursor.com/dashboard", // Try dashboard first (most likely to have trial button)
+      "https://cursor.com/trial", // Direct trial page
+      "https://cursor.com", // Homepage fallback
     ];
 
     for (const url of pages) {
       try {
         console.log(`🔄 Trying ${url}...`);
         await chrome.tabs.update(tab.id, { url: url });
-        await new Promise((resolve) => setTimeout(resolve, 3000));
+        await new Promise((resolve) => setTimeout(resolve, 4000)); // Longer wait for page load
 
         const success = await this.tryActivateWithCards(tab.id, cards);
         if (success) {
@@ -3657,8 +3697,24 @@ Available techniques:
       }
     }
 
+    // Last resort: direct navigation to a known trial signup flow
+    try {
+      console.log("🆘 Last resort: trying direct trial signup");
+      await chrome.tabs.update(tab.id, { url: "https://cursor.com/settings" });
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const finalAttempt = await this.tryActivateWithCards(tab.id, cards);
+      if (finalAttempt) {
+        this.showNotification("✅ Pro Trial activation started!", "success");
+        this.isActivatingTrial = false;
+        return;
+      }
+    } catch (lastError) {
+      console.log("❌ Final attempt failed:", lastError);
+    }
+
     this.showNotification(
-      "❌ Could not activate trial. Please try manually on cursor.com",
+      "❌ Could not activate trial automatically. Please try manually on cursor.com/trial",
       "error"
     );
     this.isActivatingTrial = false;
@@ -3666,42 +3722,84 @@ Available techniques:
 
   async tryActivateWithCards(tabId, cards) {
     return new Promise((resolve) => {
-      chrome.tabs.sendMessage(
-        tabId,
-        {
-          type: "activateProTrial",
-        },
-        (response) => {
-          if (response && response.success) {
-            this.showNotification(
-              "🎯 Found trial button! Waiting for Stripe redirect...",
-              "info"
-            );
+      console.log(`🎯 Trying activation with cards on tab ${tabId}`);
 
-            setTimeout(() => {
-              chrome.tabs.sendMessage(
-                tabId,
-                {
-                  type: "startProTrialActivation",
-                  cards: cards,
-                },
-                (activationResponse) => {
-                  if (activationResponse && activationResponse.success) {
-                    this.showNotification(
-                      "🚀 Trial activation with cards started!",
-                      "success"
-                    );
-                  }
-                }
-              );
-            }, 2000);
-
-            resolve(true);
-          } else {
-            resolve(false);
-          }
+      // First check if we're already on Stripe checkout
+      chrome.tabs.get(tabId, (tab) => {
+        if (tab && tab.url && tab.url.includes("checkout.stripe.com")) {
+          console.log("🎯 Already on Stripe checkout, sending cards directly");
+          chrome.tabs.sendMessage(
+            tabId,
+            {
+              type: "startProTrialActivation",
+              cards: cards,
+            },
+            (response) => {
+              resolve(response && response.success);
+            }
+          );
+          return;
         }
-      );
+
+        // Otherwise, try to find trial button first
+        chrome.tabs.sendMessage(
+          tabId,
+          {
+            type: "activateProTrial",
+          },
+          (response) => {
+            if (chrome.runtime.lastError) {
+              console.log("Content script not available on tab", tabId);
+              resolve(false);
+              return;
+            }
+
+            if (response && response.success) {
+              this.showNotification(
+                "🎯 Found trial button! Waiting for Stripe redirect...",
+                "info"
+              );
+
+              // Wait longer for potential redirect to Stripe
+              setTimeout(() => {
+                chrome.tabs.get(tabId, (updatedTab) => {
+                  if (
+                    updatedTab &&
+                    updatedTab.url &&
+                    updatedTab.url.includes("checkout.stripe.com")
+                  ) {
+                    console.log("🎯 Redirected to Stripe, sending cards");
+                    chrome.tabs.sendMessage(
+                      tabId,
+                      {
+                        type: "startProTrialActivation",
+                        cards: cards,
+                      },
+                      (activationResponse) => {
+                        if (activationResponse && activationResponse.success) {
+                          this.showNotification(
+                            "🚀 Trial activation with cards started!",
+                            "success"
+                          );
+                          resolve(true);
+                        } else {
+                          resolve(false);
+                        }
+                      }
+                    );
+                  } else {
+                    console.log("🔄 No redirect to Stripe detected");
+                    resolve(false);
+                  }
+                });
+              }, 3000); // Wait 3 seconds for redirect
+            } else {
+              console.log("🔄 Trial button not found or activation failed");
+              resolve(false);
+            }
+          }
+        );
+      });
     });
   }
 

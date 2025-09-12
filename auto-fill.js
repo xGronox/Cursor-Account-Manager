@@ -1523,12 +1523,13 @@ class AutoFillManager {
       return;
     }
 
-    // If we have stored data, use it
+    // If we have stored data, use it immediately
     if (this.generatedData) {
       console.log("📋 Found stored payment data, starting auto-fill...");
       setTimeout(() => {
         // Double check before filling
         if (!this.formFilledSuccessfully) {
+          console.log("🚀 Auto-filling form with stored data");
           this.fillStripeForm(this.generatedData);
         } else {
           console.log("⚠️ Form was filled while waiting, skipping");
@@ -1536,6 +1537,32 @@ class AutoFillManager {
       }, 1000);
     } else {
       console.log("📋 Ready for activation commands from extension...");
+
+      // Try to get data from extension if available
+      try {
+        chrome.runtime.sendMessage(
+          {
+            type: "generatePaymentData",
+            options: {},
+          },
+          (response) => {
+            if (response && response.success && response.data) {
+              console.log("🎲 Generated payment data from extension");
+              this.generatedData = response.data;
+
+              // Auto-fill if form is ready
+              setTimeout(() => {
+                if (!this.formFilledSuccessfully) {
+                  console.log("🚀 Auto-filling with fresh generated data");
+                  this.fillStripeForm(this.generatedData);
+                }
+              }, 1500);
+            }
+          }
+        );
+      } catch (error) {
+        console.log("⚠️ Could not get payment data from extension:", error);
+      }
     }
   }
 
