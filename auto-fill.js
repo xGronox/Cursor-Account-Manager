@@ -40,13 +40,17 @@ class AutoFillManager {
       setTimeout(() => this.initAutoActivation(), 1000);
     }
 
-    // Handle OAuth redirect completion
+    // OAuth redirect completion - DISABLED to prevent infinite redirect loop
+    // The automatic redirect was causing issues with login process
+    // Users should complete OAuth naturally without extension interference
+    /*
     if (
       window.location.href.includes("authenticator.cursor.sh") &&
       window.location.href.includes("client_id=")
     ) {
       setTimeout(() => this.handleOAuthCompletion(), 2000);
     }
+    */
   }
 
   // Setup form submit event handler
