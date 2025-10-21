@@ -153,8 +153,23 @@ body {
 .quick-actions {
   padding: 12px 16px;
   display: flex;
-  gap: 8px;
+  gap: 6px;
   border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  flex-wrap: wrap; /* Allow buttons to wrap to next line if needed */
+}
+
+/* Smaller buttons in quick-actions */
+.quick-actions .btn {
+  padding: 4px 8px;
+  font-size: 11px;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.quick-actions .btn svg {
+  width: 14px;
+  height: 14px;
   flex-shrink: 0;
 }
 
@@ -380,6 +395,48 @@ body {
 
 .btn-secondary:hover {
   background: var(--bg-hover);
+  transform: translateY(-1px);
+}
+
+.btn-success {
+  background: var(--success-color);
+  color: white;
+}
+
+.btn-success:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.btn-info {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-info:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-text {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.btn-text:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.btn-danger {
+  background: var(--danger-color);
+  color: white;
+}
+
+.btn-danger:hover {
+  background: #dc2626;
   transform: translateY(-1px);
 }
 

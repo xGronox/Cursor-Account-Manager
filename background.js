@@ -10,72 +10,9 @@ importScripts("services/generator.js");
 const generatorService = new GeneratorService();
 
 // Stripe API monitoring for automatic card switching
-const STRIPE_API_URL = "https://api.stripe.com/v1/payment_methods";
-
-// Check if webRequest API is available before using it
-if (
-  chrome.webRequest &&
-  chrome.webRequest.onCompleted &&
-  chrome.webRequest.onErrorOccurred
-) {
-  console.log("✅ WebRequest API available, setting up Stripe monitoring...");
-
-  try {
-    // Monitor Stripe API responses for pro trial activation
-    chrome.webRequest.onCompleted.addListener(
-      (details) => {
-        console.log("Stripe API Response:", {
-          url: details.url,
-          statusCode: details.statusCode,
-          method: details.method,
-        });
-
-        if (typeof details.tabId === "number" && details.tabId >= 0) {
-          try {
-            chrome.tabs.sendMessage(details.tabId, {
-              type: "stripe-response",
-              statusCode: details.statusCode,
-              url: details.url,
-            });
-          } catch (error) {
-            console.log("Failed to send stripe response to tab:", error);
-          }
-        }
-      },
-      { urls: [STRIPE_API_URL] }
-    );
-
-    chrome.webRequest.onErrorOccurred.addListener(
-      (details) => {
-        console.log("Stripe API Error:", {
-          url: details.url,
-          error: details.error,
-          method: details.method,
-        });
-
-        if (typeof details.tabId === "number" && details.tabId >= 0) {
-          try {
-            chrome.tabs.sendMessage(details.tabId, {
-              type: "stripe-response",
-              statusCode: 0,
-              error: details.error,
-              url: details.url,
-            });
-          } catch (error) {
-            console.log("Failed to send stripe error to tab:", error);
-          }
-        }
-      },
-      { urls: [STRIPE_API_URL] }
-    );
-
-    console.log("✅ Stripe API monitoring setup completed");
-  } catch (error) {
-    console.error("❌ Failed to setup WebRequest listeners:", error);
-  }
-} else {
-  console.warn("⚠️ WebRequest API not available - Stripe monitoring disabled");
-}
+// Note: webRequest API is not available in Manifest V3 without special permissions
+// This feature is disabled for compatibility
+console.log("ℹ️ Stripe API monitoring disabled (Manifest V3 compatibility)");
 
 // Initialize on install
 chrome.runtime.onInstalled.addListener(async () => {

@@ -10,8 +10,7 @@
     "scripting",
     "activeTab",
     "downloads",
-    "sidePanel",
-    "webRequest"
+    "sidePanel"
   ],
   "host_permissions": ["<all_urls>"],
   "incognito": "split",
